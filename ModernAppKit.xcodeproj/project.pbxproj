@@ -13,6 +13,8 @@
 		E67F84AF1D48394400FB35E4 /* ModernAppKit.h in Headers */ = {isa = PBXBuildFile; fileRef = E67F84AE1D48394400FB35E4 /* ModernAppKit.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		E67F84B11D483A7700FB35E4 /* LayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67F84B01D483A7700FB35E4 /* LayerView.swift */; };
 		E67F84B31D48417900FB35E4 /* AutoLayoutTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67F84B21D48417900FB35E4 /* AutoLayoutTextView.swift */; };
+		E67F84B81D48661F00FB35E4 /* CGRect+EdgeInsets.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67F84B61D48661F00FB35E4 /* CGRect+EdgeInsets.swift */; };
+		E67F84B91D48661F00FB35E4 /* ShadowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67F84B71D48661F00FB35E4 /* ShadowView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +38,8 @@
 		E67F84AE1D48394400FB35E4 /* ModernAppKit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ModernAppKit.h; sourceTree = "<group>"; };
 		E67F84B01D483A7700FB35E4 /* LayerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LayerView.swift; sourceTree = "<group>"; };
 		E67F84B21D48417900FB35E4 /* AutoLayoutTextView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AutoLayoutTextView.swift; sourceTree = "<group>"; };
+		E67F84B61D48661F00FB35E4 /* CGRect+EdgeInsets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "CGRect+EdgeInsets.swift"; sourceTree = "<group>"; };
+		E67F84B71D48661F00FB35E4 /* ShadowView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShadowView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +87,8 @@
 				E67F84AE1D48394400FB35E4 /* ModernAppKit.h */,
 				E67F84B01D483A7700FB35E4 /* LayerView.swift */,
 				E67F84B21D48417900FB35E4 /* AutoLayoutTextView.swift */,
+				E67F84B71D48661F00FB35E4 /* ShadowView.swift */,
+				E67F84B61D48661F00FB35E4 /* CGRect+EdgeInsets.swift */,
 				E67F84931D48384100FB35E4 /* Info.plist */,
 			);
 			path = Sources;
@@ -221,7 +227,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E67F84B91D48661F00FB35E4 /* ShadowView.swift in Sources */,
 				E67F84B31D48417900FB35E4 /* AutoLayoutTextView.swift in Sources */,
+				E67F84B81D48661F00FB35E4 /* CGRect+EdgeInsets.swift in Sources */,
 				E67F84B11D483A7700FB35E4 /* LayerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

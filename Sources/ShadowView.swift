@@ -1,0 +1,319 @@
+// MIT License
+//
+// Copyright © 2016 Darren Mo.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+import Cocoa
+
+/// A container view that draws a rectangular shadow underneath its content view
+/// in a performant manner.
+public final class ShadowView: NSView {
+   private static let shadowCache = _ShadowCache()
+
+   public override var shadow: NSShadow? {
+      get {
+         return nil
+      }
+
+      set {
+         preconditionFailure("Trying to set a shadow on the shadow view. This is probably not what you want.")
+      }
+   }
+
+   /// The blur radius (in points) used to render the shadow.
+   ///
+   /// The default value is 3.
+   public var shadowBlurRadius: CGFloat {
+      get {
+         return shadowImageProperties.shadowBlurRadius
+      }
+
+      set {
+         shadowImageProperties.shadowBlurRadius = newValue
+      }
+   }
+
+   /// The offset (in points) of the shadow relative to the content view.
+   ///
+   /// The default value is (0, -3).
+   public var shadowOffset = NSSize(width: 0, height: -3) {
+      didSet {
+         needsLayout = true
+         needsDisplay = true
+      }
+   }
+
+   /// The color of the shadow.
+   ///
+   /// The default value is opaque black.
+   public var shadowColor: NSColor {
+      get {
+         return shadowImageProperties.shadowColor
+      }
+
+      set {
+         shadowImageProperties.shadowColor = newValue
+      }
+   }
+
+   private var shadowImageProperties = _ShadowCache.ShadowImageProperties(shadowBlurRadius: 3,
+                                                                          shadowColor: NSColor.black()) {
+      didSet {
+         guard shadowImageProperties != oldValue else {
+            return
+         }
+
+         ShadowView.shadowCache.releaseShadowImage(with: oldValue)
+         ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+
+         needsLayout = true
+         needsDisplay = true
+      }
+   }
+
+   /// The view on top of the shadow.
+   ///
+   /// The content view must be rectangular and fully opaque in order for the shadow effect
+   /// to look convincing.
+   public var contentView: NSView? {
+      didSet {
+         guard contentView !== oldValue else {
+            return
+         }
+
+         if let oldContentView = oldValue, oldContentView.superview === self {
+            oldContentView.removeFromSuperview()
+         }
+
+         if let contentView = contentView {
+            contentView.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(contentView)
+            NSLayoutConstraint.activate([
+               contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+               contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+               contentView.topAnchor.constraint(equalTo: self.topAnchor),
+               contentView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+            ])
+         }
+      }
+   }
+
+   public override var alignmentRectInsets: EdgeInsets {
+      var insets = EdgeInsets(top: shadowBlurRadius,
+                              left: shadowBlurRadius,
+                              bottom: shadowBlurRadius,
+                              right: shadowBlurRadius)
+
+      if shadowOffset.width > 0 {
+         insets.right += max(0, abs(shadowOffset.width) - insets.left)
+         insets.left = max(0, insets.left - abs(shadowOffset.width))
+      } else {
+         insets.left += max(0, abs(shadowOffset.width) - insets.right)
+         insets.right = max(0, insets.right - abs(shadowOffset.width))
+      }
+
+      if shadowOffset.height > 0 {
+         insets.top += max(0, abs(shadowOffset.height) - insets.bottom)
+         insets.bottom = max(0, insets.bottom - abs(shadowOffset.height))
+      } else {
+         insets.bottom += max(0, abs(shadowOffset.height) - insets.top)
+         insets.top = max(0, insets.top - abs(shadowOffset.height))
+      }
+
+      return insets
+   }
+
+   private static let shadowBlurRadiusCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowBlurRadius"
+   private static let shadowOffsetWidthCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowOffsetWidth"
+   private static let shadowOffsetHeightCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowOffsetHeight"
+   private static let shadowColorCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowColor"
+
+   public override init(frame frameRect: NSRect) {
+      super.init(frame: frameRect)
+
+      self.wantsLayer = true
+      self.layerContentsRedrawPolicy = .duringViewResize
+
+      ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+   }
+
+   public required init?(coder: NSCoder) {
+      super.init(coder: coder)
+
+      ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+
+      self.shadowBlurRadius = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowBlurRadiusCoderKey))
+      self.shadowOffset.width = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetWidthCoderKey))
+      self.shadowOffset.height = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetHeightCoderKey))
+      self.shadowColor = coder.decodeObject(forKey: ShadowView.shadowColorCoderKey) as! NSColor
+   }
+
+   public override func encode(with aCoder: NSCoder) {
+      super.encode(with: aCoder)
+
+      aCoder.encode(Double(shadowBlurRadius), forKey: ShadowView.shadowBlurRadiusCoderKey)
+      aCoder.encode(Double(shadowOffset.width), forKey: ShadowView.shadowOffsetWidthCoderKey)
+      aCoder.encode(Double(shadowOffset.height), forKey: ShadowView.shadowOffsetHeightCoderKey)
+      aCoder.encode(shadowColor, forKey: ShadowView.shadowColorCoderKey)
+   }
+
+   deinit {
+      ShadowView.shadowCache.releaseShadowImage(with: shadowImageProperties)
+   }
+}
+
+extension ShadowView {
+   public override var wantsUpdateLayer: Bool {
+      return true
+   }
+
+   public override func updateLayer() {
+      guard let layer = layer else {
+         return
+      }
+
+      // I assume that the view will be redisplayed whenever the backing scale factor changes
+      let scale = (window?.backingScaleFactor ?? NSScreen.main()?.backingScaleFactor) ?? 1.0
+      let shadowImage = ShadowView.shadowCache.shadowImage(with: shadowImageProperties, scale: scale)
+
+      layer.contents = shadowImage
+      layer.contentsScale = scale
+
+      var contentsRect = CGRect(x: shadowOffset.width > 0 ? shadowOffset.width : 0,
+                                y: shadowOffset.height > 0 ? shadowOffset.height : 0,
+                                width: bounds.width - abs(shadowOffset.width),
+                                height: bounds.height - abs(shadowOffset.height))
+      contentsRect.origin.x /= bounds.width
+      contentsRect.origin.y /= bounds.height
+      contentsRect.size.width /= bounds.width
+      contentsRect.size.height /= bounds.height
+      layer.contentsRect = contentsRect
+
+      // CALayer complains that setting both the layer contents to an NSImage and
+      // the `contentsCenter` property to a non-default value is a misuse of the API.
+      // Even though it isn’t. rdar://27518277
+      var contentsCenter = CGRect(origin: CGPoint.zero, size: shadowImage.size)
+      contentsCenter.apply(shadowImage.capInsets)
+      contentsCenter.origin.x /= shadowImage.size.width
+      contentsCenter.origin.y /= shadowImage.size.height
+      contentsCenter.size.width /= shadowImage.size.width
+      contentsCenter.size.height /= shadowImage.size.height
+      layer.contentsCenter = contentsCenter
+   }
+}
+
+extension ShadowView {
+   class _ShadowCache {
+      struct ShadowImageProperties: Hashable {
+         var shadowBlurRadius: CGFloat
+         var shadowColor: NSColor
+
+         var hashValue: Int {
+            return
+               shadowBlurRadius.hashValue ^
+               shadowColor.hashValue
+         }
+      }
+
+      private class ImageContainer {
+         var retainCount = 1
+         var imageForScale = [CGFloat: NSImage]()
+      }
+
+      private var cache = [ShadowImageProperties: ImageContainer]()
+
+      func retainShadowImage(with imageProperties: ShadowImageProperties) {
+         if let imageContainer = cache[imageProperties] {
+            imageContainer.retainCount += 1
+         } else {
+            let imageContainer = ImageContainer()
+            cache[imageProperties] = imageContainer
+         }
+      }
+
+      func releaseShadowImage(with imageProperties: ShadowImageProperties) {
+         guard let imageContainer = cache[imageProperties] else {
+            preconditionFailure("Trying to over-release shadow image.")
+         }
+
+         imageContainer.retainCount -= 1
+         if imageContainer.retainCount == 0 {
+            cache[imageProperties] = nil
+         }
+      }
+
+      func shadowImage(with imageProperties: ShadowImageProperties, scale: CGFloat) -> NSImage {
+         guard let imageContainer = cache[imageProperties] else {
+            preconditionFailure("Retain the shadow image before retrieving it.")
+         }
+
+         if let image = imageContainer.imageForScale[scale] {
+            return image
+         } else {
+            let image = _ShadowCache.makeShadowImage(with: imageProperties, scale: scale)
+            imageContainer.imageForScale[scale] = image
+            return image
+         }
+      }
+
+      private static func makeShadowImage(with properties: ShadowImageProperties, scale: CGFloat) -> NSImage {
+         // Because of the way gaussian blur works, the blurred border will have a thickness
+         // of two times the blur radius. Therefore, our image size will need to be four times
+         // the blur radius plus an extra pixel for the center. This will produce a normal
+         // shadow.
+         let imageSize = NSSize(width: properties.shadowBlurRadius * 4 * scale + 1,
+                                height: properties.shadowBlurRadius * 4 * scale + 1)
+
+         let shadow = NSShadow()
+         shadow.shadowBlurRadius = properties.shadowBlurRadius * scale
+         shadow.shadowOffset = NSSize(width: 0, height: imageSize.height)
+         shadow.shadowColor = properties.shadowColor
+
+         let image = NSImage(size: imageSize)
+         image.capInsets = EdgeInsets(top: shadow.shadowBlurRadius * 2,
+                                      left: shadow.shadowBlurRadius * 2,
+                                      bottom: shadow.shadowBlurRadius * 2,
+                                      right: shadow.shadowBlurRadius * 2)
+
+         image.lockFocus()
+         defer {
+            image.unlockFocus()
+         }
+
+         shadow.set()
+
+         let offscreenRect = NSRect(x: shadow.shadowBlurRadius,
+                                    y: shadow.shadowBlurRadius - imageSize.height,
+                                    width: imageSize.width - shadow.shadowBlurRadius * 2,
+                                    height: imageSize.height - shadow.shadowBlurRadius * 2)
+
+         NSColor.black().set()
+         NSRectFill(offscreenRect)
+
+         return image
+      }
+   }
+}
+
+func ==(lhs: ShadowView._ShadowCache.ShadowImageProperties, rhs: ShadowView._ShadowCache.ShadowImageProperties) -> Bool {
+   return
+      lhs.shadowBlurRadius == rhs.shadowBlurRadius &&
+      lhs.shadowColor == rhs.shadowColor
+}
