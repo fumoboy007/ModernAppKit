@@ -193,7 +193,7 @@ extension ShadowView {
       let scale = (window?.backingScaleFactor ?? NSScreen.main()?.backingScaleFactor) ?? 1.0
       let shadowImage = ShadowView.shadowCache.shadowImage(with: shadowImageProperties, scale: scale)
 
-      layer.contents = shadowImage
+      layer.contents = shadowImage.layerContents(forContentsScale: scale)
       layer.contentsScale = scale
 
       var contentsRect = CGRect(x: shadowOffset.width > 0 ? shadowOffset.width : 0,
@@ -206,9 +206,6 @@ extension ShadowView {
       contentsRect.size.height /= bounds.height
       layer.contentsRect = contentsRect
 
-      // CALayer complains that setting both the layer contents to an NSImage and
-      // the `contentsCenter` property to a non-default value is a misuse of the API.
-      // Even though it isn’t. rdar://27518277
       var contentsCenter = CGRect(origin: CGPoint.zero, size: shadowImage.size)
       contentsCenter.apply(shadowImage.capInsets)
       contentsCenter.origin.x /= shadowImage.size.width
