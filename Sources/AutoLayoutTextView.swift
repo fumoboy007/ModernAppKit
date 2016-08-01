@@ -159,6 +159,18 @@ extension AutoLayoutTextView {
    /// A concrete `NSTextStorage` subclass that tells its `EagerLayoutManager` objects to
    /// perform layout after every edit.
    public class EagerTextStorage: NSTextStorage {
+      /// We use NSTextStorage as the backing store for two reasons.
+      ///
+      /// (1) NSTextStorage might use some special, performant backing store. We want to use that.
+      ///
+      /// (2) The `string` property getter is called a lot by the typesetter object. The NSString
+      ///     object returned by `backingStore.string` needs to be bridged to String. This involves
+      ///     a CFStringCreateCopy. If the backing store is an NSConcreteMutableAttributedString,
+      ///     which uses __NSCFString, then the copy is O(n). If the backing store is an
+      ///     NSConcreteTextStorage, which uses NSConcreteNotifyingMutableAttributedString, which
+      ///     uses NSBigMutableString, then the copy is O(1).
+      private static let backingStoreType: NSMutableAttributedString.Type = NSTextStorage.self
+
       private let backingStore: NSMutableAttributedString
 
       private var editingCount = 0
@@ -169,13 +181,13 @@ extension AutoLayoutTextView {
       private static let backingStoreCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView.EagerTextStorage.backingStore"
 
       public override init() {
-         self.backingStore = NSMutableAttributedString()
+         self.backingStore = EagerTextStorage.backingStoreType.init()
 
          super.init()
       }
 
       public required init?(pasteboardPropertyList propertyList: AnyObject, ofType type: String) {
-         self.backingStore = NSMutableAttributedString()
+         self.backingStore = EagerTextStorage.backingStoreType.init()
 
          super.init(pasteboardPropertyList: propertyList, ofType: type)
       }
