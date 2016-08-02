@@ -74,7 +74,7 @@ public final class ShadowView: NSView {
    }
 
    private var shadowImageProperties = _ShadowCache.ShadowImageProperties(shadowBlurRadius: 3,
-                                                                          shadowColor: NSColor.black()) {
+                                                                          shadowColor: NSColor.black) {
       didSet {
          guard shadowImageProperties != oldValue else {
             return
@@ -301,7 +301,7 @@ extension ShadowView {
                                     width: imageSize.width - shadow.shadowBlurRadius * 2,
                                     height: imageSize.height - shadow.shadowBlurRadius * 2)
 
-         NSColor.black().set()
+         NSColor.black.set()
          NSRectFill(offscreenRect)
 
          return image
