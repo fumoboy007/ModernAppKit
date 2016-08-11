@@ -132,6 +132,16 @@ public class AutoLayoutTextView: NSTextView {
       aCoder.encode(_textStorage, forKey: AutoLayoutTextView.textStorageCoderKey)
       aCoder.encode(_layoutManager, forKey: AutoLayoutTextView.layoutManagerCoderKey)
    }
+
+   deinit {
+      if let layoutManager = _layoutManager {
+         // Because NSTextView does not support weak references, NotificationCenter will not
+         // automatically remove the observer for us.
+         NotificationCenter.default.removeObserver(self,
+                                                   name: EagerLayoutManager.didCompleteLayout,
+                                                   object: layoutManager)
+      }
+   }
 }
 
 extension AutoLayoutTextView {
