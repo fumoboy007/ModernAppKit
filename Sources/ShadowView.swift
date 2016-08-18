@@ -25,7 +25,11 @@ import Cocoa
 /// A container view that draws a rectangular shadow underneath its content view
 /// in a performant manner.
 public final class ShadowView: NSView {
+   // MARK: Shadow Cache
+
    private static let shadowCache = _ShadowCache()
+
+   // MARK: Disallowed NSView Properties
 
    public override var shadow: NSShadow? {
       get {
@@ -36,6 +40,8 @@ public final class ShadowView: NSView {
          preconditionFailure("Trying to set a shadow on the shadow view. This is probably not what you want.")
       }
    }
+
+   // MARK: Shadow Properties
 
    /// The blur radius (in points) used to render the shadow.
    ///
@@ -87,6 +93,8 @@ public final class ShadowView: NSView {
          needsDisplay = true
       }
    }
+
+   // MARK: Content View
 
    /// The view on top of the shadow.
    ///
@@ -140,6 +148,8 @@ public final class ShadowView: NSView {
       return insets
    }
 
+   // MARK: Initialization
+
    private static let shadowBlurRadiusCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowBlurRadius"
    private static let shadowOffsetWidthCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowOffsetWidth"
    private static let shadowOffsetHeightCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowOffsetHeight"
@@ -177,9 +187,9 @@ public final class ShadowView: NSView {
    deinit {
       ShadowView.shadowCache.releaseShadowImage(with: shadowImageProperties)
    }
-}
 
-extension ShadowView {
+   // MARK: Updating the Layer
+
    public override var wantsUpdateLayer: Bool {
       return true
    }
@@ -214,11 +224,11 @@ extension ShadowView {
       contentsCenter.size.height /= shadowImage.size.height
       layer.contentsCenter = contentsCenter
    }
-}
 
-extension ShadowView {
-   class _ShadowCache {
-      struct ShadowImageProperties: Hashable {
+   // MARK: -
+
+   fileprivate class _ShadowCache {
+      fileprivate struct ShadowImageProperties: Hashable {
          var shadowBlurRadius: CGFloat
          var shadowColor: NSColor
 
@@ -235,6 +245,8 @@ extension ShadowView {
       }
 
       private var cache = [ShadowImageProperties: ImageContainer]()
+
+      // MARK: Cache API
 
       func retainShadowImage(with imageProperties: ShadowImageProperties) {
          if let imageContainer = cache[imageProperties] {
@@ -269,6 +281,8 @@ extension ShadowView {
             return image
          }
       }
+
+      // MARK: Creating Shadow Images
 
       private static func makeShadowImage(with properties: ShadowImageProperties, scale: CGFloat) -> NSImage {
          // Because of the way gaussian blur works, the blurred border will have a thickness
@@ -309,7 +323,9 @@ extension ShadowView {
    }
 }
 
-func ==(lhs: ShadowView._ShadowCache.ShadowImageProperties, rhs: ShadowView._ShadowCache.ShadowImageProperties) -> Bool {
+// MARK: - Operators
+
+fileprivate func ==(lhs: ShadowView._ShadowCache.ShadowImageProperties, rhs: ShadowView._ShadowCache.ShadowImageProperties) -> Bool {
    return
       lhs.shadowBlurRadius == rhs.shadowBlurRadius &&
       lhs.shadowColor == rhs.shadowColor

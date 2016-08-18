@@ -25,7 +25,9 @@ import Cocoa
 /// A layer-backed view with additional APIs for setting background color,
 /// border width, border color, and corner radius. Use if you do not need
 /// to do custom drawing.
-public class LayerView: NSView {
+open class LayerView: NSView {
+   // MARK: Layer Properties
+
    public enum BorderWidth {
       case points(_: CGFloat)
       case pixels(_: CGFloat)
@@ -71,6 +73,8 @@ public class LayerView: NSView {
       }
    }
 
+   // MARK: Initialization
+
    private static let backgroundColorCoderKey = "mo.darren.ModernAppKit.LayerView.backgroundColor"
    private static let isBorderWidthInPointsCoderKey = "mo.darren.ModernAppKit.LayerView.isBorderWidthInPoints"
    private static let borderWidthCoderKey = "mo.darren.ModernAppKit.LayerView.borderWidth"
@@ -101,7 +105,7 @@ public class LayerView: NSView {
       super.init(coder: coder)
    }
 
-   public override func encode(with aCoder: NSCoder) {
+   open override func encode(with aCoder: NSCoder) {
       super.encode(with: aCoder)
 
       aCoder.encode(backgroundColor, forKey: LayerView.backgroundColorCoderKey)
@@ -119,14 +123,14 @@ public class LayerView: NSView {
       aCoder.encode(borderColor, forKey: LayerView.borderColorCoderKey)
       aCoder.encode(Double(cornerRadius), forKey: LayerView.cornerRadiusCoderKey)
    }
-}
 
-extension LayerView {
-   public override var wantsUpdateLayer: Bool {
+   // MARK: Updating the Layer
+
+   open override var wantsUpdateLayer: Bool {
       return true
    }
 
-   public override func updateLayer() {
+   open override func updateLayer() {
       guard let layer = layer else {
          return
       }

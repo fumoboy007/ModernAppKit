@@ -24,14 +24,16 @@ import Cocoa
 
 /// An `NSTextView` subclass that implements `intrinsicContentSize` so that the text view
 /// can participate in layout outside of a scroll view.
-public class AutoLayoutTextView: NSTextView {
+open class AutoLayoutTextView: NSTextView {
+   // MARK: Text Components
+
    private var _textStorage: EagerTextStorage?
-   public override var textStorage: NSTextStorage? {
+   open override var textStorage: NSTextStorage? {
       return _textStorage
    }
 
    private var _layoutManager: EagerLayoutManager?
-   public override var layoutManager: NSLayoutManager? {
+   open override var layoutManager: NSLayoutManager? {
       return _layoutManager
    }
 
@@ -40,7 +42,7 @@ public class AutoLayoutTextView: NSTextView {
    /// The text view will use the text storage and layout manager associated with the specified
    /// text container. The text storage and layout manager must be instances of
    /// `EagerTextStorage` and `EagerLayoutManager`, respectively.
-   public override var textContainer: NSTextContainer? {
+   open override var textContainer: NSTextContainer? {
       willSet {
          if let layoutManager = _layoutManager {
             NotificationCenter.default.removeObserver(self,
@@ -70,6 +72,8 @@ public class AutoLayoutTextView: NSTextView {
          }
       }
    }
+
+   // MARK: Initialization
 
    private static let textStorageCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView._textStorage"
    private static let layoutManagerCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView._layoutManager"
@@ -126,7 +130,7 @@ public class AutoLayoutTextView: NSTextView {
       }
    }
 
-   public override func encode(with aCoder: NSCoder) {
+   open override func encode(with aCoder: NSCoder) {
       super.encode(with: aCoder)
 
       aCoder.encode(_textStorage, forKey: AutoLayoutTextView.textStorageCoderKey)
@@ -142,17 +146,17 @@ public class AutoLayoutTextView: NSTextView {
                                                    object: layoutManager)
       }
    }
-}
 
-extension AutoLayoutTextView {
+   // MARK: Intrinsic Content Size
+
    /// Called when the layout manager completes layout.
    ///
    /// The default implementation of this method invalidates the intrinsic content size.
-   public func didCompleteLayout(_ notification: Notification) {
+   open func didCompleteLayout(_ notification: Notification) {
       invalidateIntrinsicContentSize()
    }
 
-   public override var intrinsicContentSize: NSSize {
+   open override var intrinsicContentSize: NSSize {
       guard let layoutManager = layoutManager, let textContainer = textContainer else {
          return NSSize(width: NSViewNoIntrinsicMetric, height: NSViewNoIntrinsicMetric)
       }
@@ -163,12 +167,14 @@ extension AutoLayoutTextView {
 
       return textSize
    }
-}
 
-extension AutoLayoutTextView {
+   // MARK: -
+
    /// A concrete `NSTextStorage` subclass that tells its `EagerLayoutManager` objects to
    /// perform layout after every edit.
-   public class EagerTextStorage: NSTextStorage {
+   open class EagerTextStorage: NSTextStorage {
+      // MARK: Backing Store
+
       /// We use NSTextStorage as the backing store for two reasons.
       ///
       /// (1) NSTextStorage might use some special, performant backing store. We want to use that.
@@ -183,10 +189,14 @@ extension AutoLayoutTextView {
 
       private let backingStore: NSMutableAttributedString
 
+      // MARK: Nested Editing State
+
       private var editingCount = 0
       var isEditing: Bool {
          return editingCount > 0
       }
+
+      // MARK: Initialization
 
       private static let backingStoreCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView.EagerTextStorage.backingStore"
 
@@ -196,7 +206,7 @@ extension AutoLayoutTextView {
          super.init()
       }
 
-      public required init?(pasteboardPropertyList propertyList: AnyObject, ofType type: String) {
+      public required init?(pasteboardPropertyList propertyList: Any, ofType type: String) {
          self.backingStore = EagerTextStorage.backingStoreType.init()
 
          super.init(pasteboardPropertyList: propertyList, ofType: type)
@@ -208,22 +218,24 @@ extension AutoLayoutTextView {
          super.init(coder: aDecoder)
       }
 
-      public override func encode(with aCoder: NSCoder) {
+      open override func encode(with aCoder: NSCoder) {
          super.encode(with: aCoder)
 
          aCoder.encode(backingStore, forKey: EagerTextStorage.backingStoreCoderKey)
       }
 
-      public override func beginEditing() {
+      // MARK: Custom Change Notifications
+
+      open override func beginEditing() {
          editingCount += 1
 
          super.beginEditing()
          backingStore.beginEditing()
       }
 
-      public override func edited(_ editedMask: NSTextStorageEditActions,
-                                  range editedRange: NSRange,
-                                  changeInLength delta: Int) {
+      open override func edited(_ editedMask: NSTextStorageEditActions,
+                                range editedRange: NSRange,
+                                changeInLength delta: Int) {
          super.edited(editedMask,
                       range: editedRange,
                       changeInLength: delta)
@@ -233,7 +245,7 @@ extension AutoLayoutTextView {
          }
       }
 
-      public override func endEditing() {
+      open override func endEditing() {
          backingStore.endEditing()
          super.endEditing()
 
@@ -252,22 +264,24 @@ extension AutoLayoutTextView {
          }
       }
 
-      public override var string: String {
+      // MARK: NSMutableAttributedString Primitives
+
+      open override var string: String {
          return backingStore.string
       }
 
-      public override func attributes(at location: Int, effectiveRange range: NSRangePointer?) -> [String : AnyObject] {
+      open override func attributes(at location: Int, effectiveRange range: NSRangePointer?) -> [String : Any] {
          return backingStore.attributes(at: location, effectiveRange: range)
       }
 
-      public override func replaceCharacters(in range: NSRange, with str: String) {
+      open override func replaceCharacters(in range: NSRange, with str: String) {
          backingStore.replaceCharacters(in: range, with: str)
          edited(.editedCharacters,
                 range: range,
                 changeInLength: (str as NSString).length - range.length)
       }
 
-      public override func setAttributes(_ attrs: [String : AnyObject]?, range: NSRange) {
+      open override func setAttributes(_ attrs: [String : Any]?, range: NSRange) {
          backingStore.setAttributes(attrs, range: range)
          edited(.editedAttributes,
                 range: range,
@@ -275,14 +289,20 @@ extension AutoLayoutTextView {
       }
    }
 
+   // MARK: -
+
    /// An `NSLayoutManager` subclass that performs layout immediately whenever text changes
    /// or whenever the geometry of a text container changes. `EagerLayoutManager` posts a
    /// `.didCompleteLayout` notification when it completes layout. The text storage must be
    /// an instance of `EagerTextStorage`.
-   public class EagerLayoutManager: NSLayoutManager {
+   open class EagerLayoutManager: NSLayoutManager {
+      // MARK: Notifications
+
       public static let didCompleteLayout = Notification.Name(rawValue: "mo.darren.ModernAppKit.AutoLayoutTextView.EagerLayoutManager.didCompleteLayout")
 
-      public override var textStorage: NSTextStorage? {
+      // MARK: Text Storage
+
+      open override var textStorage: NSTextStorage? {
          didSet {
             if let textStorage = textStorage {
                precondition(textStorage is EagerTextStorage, "EagerLayoutManager only accepts EagerTextStorage.")
@@ -299,6 +319,8 @@ extension AutoLayoutTextView {
          }
       }
 
+      // MARK: Initialization
+
       private static let textStorageCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView.EagerLayoutManager._textStorage"
 
       public override init() {
@@ -314,13 +336,15 @@ extension AutoLayoutTextView {
          super.init(coder: coder)
       }
 
-      public override func encode(with aCoder: NSCoder) {
+      open override func encode(with aCoder: NSCoder) {
          super.encode(with: aCoder)
 
          aCoder.encode(self._textStorage, forKey: EagerLayoutManager.textStorageCoderKey)
       }
 
-      public override func textContainerChangedGeometry(_ container: NSTextContainer) {
+      // MARK: Performing Layout
+
+      open override func textContainerChangedGeometry(_ container: NSTextContainer) {
          super.textContainerChangedGeometry(container)
 
          if _textStorage?.isEditing == false {
