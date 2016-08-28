@@ -27,7 +27,7 @@ import Cocoa
 public final class ShadowView: NSView {
    // MARK: Shadow Cache
 
-   private static let shadowCache = _ShadowCache()
+   private static let shadowCache = ShadowCache()
 
    // MARK: Disallowed NSView Properties
 
@@ -79,8 +79,8 @@ public final class ShadowView: NSView {
       }
    }
 
-   private var shadowImageProperties = _ShadowCache.ShadowImageProperties(shadowBlurRadius: 3,
-                                                                          shadowColor: NSColor.black) {
+   private var shadowImageProperties = ShadowCache.ShadowImageProperties(shadowBlurRadius: 3,
+                                                                         shadowColor: NSColor.black) {
       didSet {
          guard shadowImageProperties != oldValue else {
             return
@@ -227,7 +227,7 @@ public final class ShadowView: NSView {
 
    // MARK: -
 
-   fileprivate class _ShadowCache {
+   fileprivate class ShadowCache {
       fileprivate struct ShadowImageProperties: Hashable {
          var shadowBlurRadius: CGFloat
          var shadowColor: NSColor
@@ -276,7 +276,7 @@ public final class ShadowView: NSView {
          if let image = imageContainer.imageForScale[scale] {
             return image
          } else {
-            let image = _ShadowCache.makeShadowImage(with: imageProperties, scale: scale)
+            let image = ShadowCache.makeShadowImage(with: imageProperties, scale: scale)
             imageContainer.imageForScale[scale] = image
             return image
          }
@@ -325,7 +325,7 @@ public final class ShadowView: NSView {
 
 // MARK: - Operators
 
-fileprivate func ==(lhs: ShadowView._ShadowCache.ShadowImageProperties, rhs: ShadowView._ShadowCache.ShadowImageProperties) -> Bool {
+fileprivate func ==(lhs: ShadowView.ShadowCache.ShadowImageProperties, rhs: ShadowView.ShadowCache.ShadowImageProperties) -> Bool {
    return
       lhs.shadowBlurRadius == rhs.shadowBlurRadius &&
       lhs.shadowColor == rhs.shadowColor
