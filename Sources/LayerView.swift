@@ -24,20 +24,40 @@ import Cocoa
 
 /// A layer-backed view with additional APIs for setting background color,
 /// border width, border color, and corner radius. Use if you do not need
-/// to do custom drawing.
+/// to do custom drawing. Supports animations.
 open class LayerView: NSView {
    // MARK: Layer Properties
 
    public enum BorderWidth {
       case points(_: CGFloat)
       case pixels(_: CGFloat)
+
+      func inPoints(usingScale contentsScale: CGFloat) -> CGFloat {
+         switch self {
+         case .points(let borderWidthInPoints):
+            return borderWidthInPoints
+
+         case .pixels(let borderWidthInPixels):
+            return borderWidthInPixels / contentsScale
+         }
+      }
+
+      func inPixels(usingScale contentsScale: CGFloat) -> CGFloat {
+         switch self {
+         case .points(let borderWidthInPoints):
+            return borderWidthInPoints * contentsScale
+
+         case .pixels(let borderWidthInPixels):
+            return borderWidthInPixels
+         }
+      }
    }
 
    /// The background color of the view. Corresponds to the
-   /// `backgroundColor` property of `CALayer`.
+   /// `backgroundColor` property of `CALayer`. Animatable.
    ///
    /// The default value is no color.
-   public var backgroundColor: NSColor? {
+   public dynamic var backgroundColor = NSColor.clear {
       didSet {
          needsDisplay = true
       }
@@ -46,28 +66,70 @@ open class LayerView: NSView {
    /// The width of the border around the view. Corresponds to the
    /// `borderWidth` property of `CALayer`.
    ///
+   /// To animate, use `animatableBorderWidthInPoints` or
+   /// `animatableBorderWidthInPixels`.
+   ///
    /// The default value is 0.
-   public var borderWidth = BorderWidth.points(0) {
+   public var borderWidth: BorderWidth {
+      get {
+         return _borderWidth
+      }
+
+      set {
+         _borderWidth = newValue
+
+         // Stop animations
+         willChangeValue(forKey: "animatableBorderWidthInPoints")
+         didChangeValue(forKey: "animatableBorderWidthInPoints")
+         willChangeValue(forKey: "animatableBorderWidthInPixels")
+         didChangeValue(forKey: "animatableBorderWidthInPixels")
+      }
+   }
+   private var _borderWidth = BorderWidth.points(0) {
       didSet {
          needsDisplay = true
       }
    }
 
+   /// An animatable version of the `borderWidth` property. Values
+   /// are in points.
+   ///
+   /// The `fromValue` of the animation will be automatically set
+   /// to the current value of `borderWidth`.
+   public dynamic var animatableBorderWidthInPoints: CGFloat = 0 {
+      didSet {
+         _borderWidth = .points(animatableBorderWidthInPoints)
+      }
+   }
+
+   /// An animatable version of the `borderWidth` property. Values
+   /// are in pixels.
+   ///
+   /// The `fromValue` of the animation will be automatically set
+   /// to the current value of `borderWidth`.
+   public dynamic var animatableBorderWidthInPixels: CGFloat = 0 {
+      didSet {
+         _borderWidth = .pixels(animatableBorderWidthInPixels)
+      }
+   }
+
+   private var contentsScale: CGFloat = 1.0
+
    /// The color of the border around the view. Corresponds to the
-   /// `borderColor` property of `CALayer`.
+   /// `borderColor` property of `CALayer`. Animatable.
    ///
    /// The default value is opaque black.
-   public var borderColor: NSColor? {
+   public dynamic var borderColor = NSColor.black {
       didSet {
          needsDisplay = true
       }
    }
 
    /// The radius of the rounded corners of the view. Corresponds to the
-   /// `cornerRadius` property of `CALayer`.
+   /// `cornerRadius` property of `CALayer`. Animatable.
    ///
    /// The default value is 0.
-   public var cornerRadius: CGFloat = 0 {
+   public dynamic var cornerRadius: CGFloat = 0 {
       didSet {
          needsDisplay = true
       }
@@ -84,25 +146,33 @@ open class LayerView: NSView {
    public override init(frame frameRect: NSRect) {
       super.init(frame: frameRect)
 
-      wantsLayer = true
-      layerContentsRedrawPolicy = .onSetNeedsDisplay
+      commonInit()
    }
 
    public required init?(coder: NSCoder) {
-      self.backgroundColor = coder.decodeObject(forKey: LayerView.backgroundColorCoderKey) as? NSColor
+      guard let backgroundColor = coder.decodeObject(forKey: LayerView.backgroundColorCoderKey) as? NSColor else {
+         return nil
+      }
+      self.backgroundColor = backgroundColor
 
       let isBorderWidthInPoints = coder.decodeBool(forKey: LayerView.isBorderWidthInPointsCoderKey)
       let borderWidth = CGFloat(coder.decodeDouble(forKey: LayerView.borderWidthCoderKey))
       if isBorderWidthInPoints {
-         self.borderWidth = .points(borderWidth)
+         self._borderWidth = .points(borderWidth)
       } else {
-         self.borderWidth = .pixels(borderWidth)
+         self._borderWidth = .pixels(borderWidth)
       }
 
-      self.borderColor = coder.decodeObject(forKey: LayerView.borderColorCoderKey) as? NSColor
+      guard let borderColor = coder.decodeObject(forKey: LayerView.borderColorCoderKey) as? NSColor else {
+         return nil
+      }
+      self.borderColor = borderColor
+
       self.cornerRadius = CGFloat(coder.decodeDouble(forKey: LayerView.cornerRadiusCoderKey))
 
       super.init(coder: coder)
+
+      commonInit()
    }
 
    open override func encode(with aCoder: NSCoder) {
@@ -124,6 +194,22 @@ open class LayerView: NSView {
       aCoder.encode(Double(cornerRadius), forKey: LayerView.cornerRadiusCoderKey)
    }
 
+   private func commonInit() {
+      wantsLayer = true
+      layerContentsRedrawPolicy = .onSetNeedsDisplay
+
+      let animatableProperties = [
+         "backgroundColor",
+         "animatableBorderWidthInPoints",
+         "animatableBorderWidthInPixels",
+         "borderColor",
+         "cornerRadius"
+      ]
+      for propertyName in animatableProperties {
+         animations[propertyName] = CABasicAnimation(keyPath: propertyName)
+      }
+   }
+
    // MARK: Updating the Layer
 
    open override var wantsUpdateLayer: Bool {
@@ -135,17 +221,53 @@ open class LayerView: NSView {
          return
       }
 
-      layer.backgroundColor = backgroundColor?.cgColor
+      layer.backgroundColor = backgroundColor.cgColor
 
-      switch borderWidth {
-      case .points(let borderWidthInPoints):
-         layer.borderWidth = borderWidthInPoints
-
-      case .pixels(let borderWidthInPixels):
-         layer.borderWidth = borderWidthInPixels / layer.contentsScale
-      }
-      layer.borderColor = borderColor?.cgColor
+      layer.borderWidth = borderWidth.inPoints(usingScale: contentsScale)
+      layer.borderColor = borderColor.cgColor
 
       layer.cornerRadius = cornerRadius
+   }
+
+   open override func viewDidChangeBackingProperties() {
+      super.viewDidChangeBackingProperties()
+
+      contentsScale = window?.backingScaleFactor ?? 1.0
+   }
+
+   // MARK: Animations
+
+   open override func animation(forKey key: String) -> Any? {
+      guard let animationObj = super.animation(forKey: key) else {
+         return nil
+      }
+      guard let animation = animationObj as? CABasicAnimation else {
+         return animationObj
+      }
+
+      switch key {
+      case "animatableBorderWidthInPoints":
+         guard animation.fromValue == nil else {
+            break
+         }
+
+         // Set fromValue to current borderWidth value, which may be
+         // different from current animatableBorderWidthInPoints value
+         animation.fromValue = borderWidth.inPoints(usingScale: contentsScale)
+
+      case "animatableBorderWidthInPixels":
+         guard animation.fromValue == nil else {
+            break
+         }
+
+         // Set fromValue to current borderWidth value, which may be
+         // different from current animatableBorderWidthInPixels value
+         animation.fromValue = borderWidth.inPixels(usingScale: contentsScale)
+
+      default:
+         break
+      }
+
+      return animation
    }
 }
