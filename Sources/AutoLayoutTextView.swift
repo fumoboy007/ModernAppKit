@@ -162,8 +162,8 @@ open class AutoLayoutTextView: NSTextView {
       }
 
       var textSize = layoutManager.usedRect(for: textContainer).size
-      textSize.width = ceil(textSize.width + textContainerInset.width * 2)
-      textSize.height = ceil(textSize.height + textContainerInset.height * 2)
+      textSize.width = (textSize.width + textContainerInset.width * 2).rounded(.up)
+      textSize.height = (textSize.height + textContainerInset.height * 2).rounded(.up)
 
       return textSize
    }
