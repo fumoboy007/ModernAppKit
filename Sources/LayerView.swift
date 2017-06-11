@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016 Darren Mo.
+// Copyright © 2016-2017 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -57,6 +57,7 @@ open class LayerView: NSView {
    /// `backgroundColor` property of `CALayer`. Animatable.
    ///
    /// The default value is no color.
+   @objc
    public dynamic var backgroundColor = NSColor.clear {
       didSet {
          needsDisplay = true
@@ -96,6 +97,7 @@ open class LayerView: NSView {
    ///
    /// The `fromValue` of the animation will be automatically set
    /// to the current value of `borderWidth`.
+   @objc
    public dynamic var animatableBorderWidthInPoints: CGFloat = 0 {
       didSet {
          _borderWidth = .points(animatableBorderWidthInPoints)
@@ -107,6 +109,7 @@ open class LayerView: NSView {
    ///
    /// The `fromValue` of the animation will be automatically set
    /// to the current value of `borderWidth`.
+   @objc
    public dynamic var animatableBorderWidthInPixels: CGFloat = 0 {
       didSet {
          _borderWidth = .pixels(animatableBorderWidthInPixels)
@@ -119,6 +122,7 @@ open class LayerView: NSView {
    /// `borderColor` property of `CALayer`. Animatable.
    ///
    /// The default value is opaque black.
+   @objc
    public dynamic var borderColor = NSColor.black {
       didSet {
          needsDisplay = true
@@ -129,6 +133,7 @@ open class LayerView: NSView {
    /// `cornerRadius` property of `CALayer`. Animatable.
    ///
    /// The default value is 0.
+   @objc
    public dynamic var cornerRadius: CGFloat = 0 {
       didSet {
          needsDisplay = true
@@ -206,7 +211,8 @@ open class LayerView: NSView {
          "cornerRadius"
       ]
       for propertyName in animatableProperties {
-         animations[propertyName] = CABasicAnimation(keyPath: propertyName)
+         let key = NSAnimatablePropertyKey(rawValue: propertyName)
+         animations[key] = CABasicAnimation(keyPath: propertyName)
       }
    }
 
@@ -237,7 +243,7 @@ open class LayerView: NSView {
 
    // MARK: Animations
 
-   open override func animation(forKey key: String) -> Any? {
+   open override func animation(forKey key: NSAnimatablePropertyKey) -> Any? {
       guard let animationObj = super.animation(forKey: key) else {
          return nil
       }
@@ -245,7 +251,7 @@ open class LayerView: NSView {
          return animationObj
       }
 
-      switch key {
+      switch key.rawValue {
       case "animatableBorderWidthInPoints":
          guard animation.fromValue == nil else {
             break

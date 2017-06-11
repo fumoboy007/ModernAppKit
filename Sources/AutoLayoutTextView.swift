@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016 Darren Mo.
+// Copyright © 2016-2017 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -152,13 +152,14 @@ open class AutoLayoutTextView: NSTextView {
    /// Called when the layout manager completes layout.
    ///
    /// The default implementation of this method invalidates the intrinsic content size.
+   @objc
    open func didCompleteLayout(_ notification: Notification) {
       invalidateIntrinsicContentSize()
    }
 
    open override var intrinsicContentSize: NSSize {
       guard let layoutManager = layoutManager, let textContainer = textContainer else {
-         return NSSize(width: NSViewNoIntrinsicMetric, height: NSViewNoIntrinsicMetric)
+         return NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
       }
 
       var textSize = layoutManager.usedRect(for: textContainer).size
@@ -206,7 +207,7 @@ open class AutoLayoutTextView: NSTextView {
          super.init()
       }
 
-      public required init?(pasteboardPropertyList propertyList: Any, ofType type: String) {
+      public required init?(pasteboardPropertyList propertyList: Any, ofType type: NSPasteboard.PasteboardType) {
          self.backingStore = EagerTextStorage.backingStoreType.init()
 
          super.init(pasteboardPropertyList: propertyList, ofType: type)
@@ -270,7 +271,7 @@ open class AutoLayoutTextView: NSTextView {
          return backingStore.string
       }
 
-      open override func attributes(at location: Int, effectiveRange range: NSRangePointer?) -> [String : Any] {
+      open override func attributes(at location: Int, effectiveRange range: NSRangePointer?) -> [NSAttributedStringKey : Any] {
          return backingStore.attributes(at: location, effectiveRange: range)
       }
 
@@ -281,7 +282,7 @@ open class AutoLayoutTextView: NSTextView {
                 changeInLength: (str as NSString).length - range.length)
       }
 
-      open override func setAttributes(_ attrs: [String : Any]?, range: NSRange) {
+      open override func setAttributes(_ attrs: [NSAttributedStringKey : Any]?, range: NSRange) {
          backingStore.setAttributes(attrs, range: range)
          edited(.editedAttributes,
                 range: range,

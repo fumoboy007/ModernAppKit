@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016 Darren Mo.
+// Copyright © 2016-2017 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -123,11 +123,11 @@ public final class ShadowView: NSView {
       }
    }
 
-   public override var alignmentRectInsets: EdgeInsets {
-      var insets = EdgeInsets(top: shadowBlurRadius,
-                              left: shadowBlurRadius,
-                              bottom: shadowBlurRadius,
-                              right: shadowBlurRadius)
+   public override var alignmentRectInsets: NSEdgeInsets {
+      var insets = NSEdgeInsets(top: shadowBlurRadius,
+                                left: shadowBlurRadius,
+                                bottom: shadowBlurRadius,
+                                right: shadowBlurRadius)
 
       if shadowOffset.width > 0 {
          insets.right += max(0, abs(shadowOffset.width) - insets.left)
@@ -200,7 +200,7 @@ public final class ShadowView: NSView {
       }
 
       // I assume that the view will be redisplayed whenever the backing scale factor changes
-      let scale = (window?.backingScaleFactor ?? NSScreen.main()?.backingScaleFactor) ?? 1.0
+      let scale = (window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor) ?? 1.0
       let shadowImage = ShadowView.shadowCache.shadowImage(with: shadowImageProperties, scale: scale)
 
       layer.contents = shadowImage.layerContents(forContentsScale: scale)
@@ -298,10 +298,10 @@ public final class ShadowView: NSView {
          shadow.shadowColor = properties.shadowColor
 
          let image = NSImage(size: imageSize)
-         image.capInsets = EdgeInsets(top: shadow.shadowBlurRadius * 2,
-                                      left: shadow.shadowBlurRadius * 2,
-                                      bottom: shadow.shadowBlurRadius * 2,
-                                      right: shadow.shadowBlurRadius * 2)
+         image.capInsets = NSEdgeInsets(top: shadow.shadowBlurRadius * 2,
+                                        left: shadow.shadowBlurRadius * 2,
+                                        bottom: shadow.shadowBlurRadius * 2,
+                                        right: shadow.shadowBlurRadius * 2)
 
          image.lockFocus()
          defer {
@@ -316,7 +316,7 @@ public final class ShadowView: NSView {
                                     height: imageSize.height - shadow.shadowBlurRadius * 2)
 
          NSColor.black.set()
-         NSRectFill(offscreenRect)
+         offscreenRect.fill()
 
          return image
       }

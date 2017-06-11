@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016 Darren Mo.
+// Copyright © 2016-2017 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,14 +23,14 @@
 import Cocoa
 
 extension CGRect {
-   mutating func apply(_ edgeInsets: EdgeInsets, isFlipped: Bool = false) {
+   mutating func apply(_ edgeInsets: NSEdgeInsets, isFlipped: Bool = false) {
       origin.x += edgeInsets.left
       origin.y += isFlipped ? edgeInsets.top : edgeInsets.bottom
       size.width -= edgeInsets.left + edgeInsets.right
       size.height -= edgeInsets.top + edgeInsets.bottom
    }
 
-   func applying(_ edgeInsets: EdgeInsets, isFlipped: Bool = false) -> CGRect {
+   func applying(_ edgeInsets: NSEdgeInsets, isFlipped: Bool = false) -> CGRect {
       var insetRect = self
       insetRect.apply(edgeInsets, isFlipped: isFlipped)
       return insetRect
