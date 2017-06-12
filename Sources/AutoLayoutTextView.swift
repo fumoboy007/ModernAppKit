@@ -174,6 +174,10 @@ open class AutoLayoutTextView: NSTextView {
    /// A concrete `NSTextStorage` subclass that tells its `EagerLayoutManager` objects to
    /// perform layout after every edit.
    open class EagerTextStorage: NSTextStorage {
+      // MARK: Notifications
+
+      public static let willChange = Notification.Name(rawValue: "mo.darren.ModernAppKit.AutoLayoutTextView.EagerTextStorage.willChange")
+
       // MARK: Backing Store
 
       /// We use NSTextStorage as the backing store for two reasons.
@@ -276,6 +280,9 @@ open class AutoLayoutTextView: NSTextView {
       }
 
       open override func replaceCharacters(in range: NSRange, with str: String) {
+         NotificationCenter.default.post(name: EagerTextStorage.willChange,
+                                         object: self)
+
          backingStore.replaceCharacters(in: range, with: str)
          edited(.editedCharacters,
                 range: range,
@@ -283,6 +290,9 @@ open class AutoLayoutTextView: NSTextView {
       }
 
       open override func setAttributes(_ attrs: [NSAttributedStringKey : Any]?, range: NSRange) {
+         NotificationCenter.default.post(name: EagerTextStorage.willChange,
+                                         object: self)
+
          backingStore.setAttributes(attrs, range: range)
          edited(.editedAttributes,
                 range: range,
