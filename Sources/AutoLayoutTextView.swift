@@ -154,19 +154,58 @@ open class AutoLayoutTextView: NSTextView {
    /// The default implementation of this method invalidates the intrinsic content size.
    @objc
    open func didCompleteLayout(_ notification: Notification) {
-      invalidateIntrinsicContentSize()
+      _intrinsicContentSize = calculateIntrinsicContentSize()
    }
 
-   open override var intrinsicContentSize: NSSize {
+   private func calculateIntrinsicContentSize() -> NSSize {
       guard let layoutManager = layoutManager, let textContainer = textContainer else {
          return NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
       }
 
-      var textSize = layoutManager.usedRect(for: textContainer).size
-      textSize.width = (textSize.width + textContainerInset.width * 2).rounded(.up)
-      textSize.height = (textSize.height + textContainerInset.height * 2).rounded(.up)
+      // The layout manager’s `usedRect(for:)` method returns (width of container, height of text).
+      // We want to use the width of the text for the intrinsic content size, so we need to calculate
+      // it ourselves.
+      var intrinsicContentSize = NSSize(width: calculateTextWidth(),
+                                        height: layoutManager.usedRect(for: textContainer).height)
+      intrinsicContentSize.width = (intrinsicContentSize.width + textContainerInset.width * 2).rounded(.up)
+      intrinsicContentSize.height = (intrinsicContentSize.height + textContainerInset.height * 2).rounded(.up)
 
-      return textSize
+      return intrinsicContentSize
+   }
+
+   /// Calculates the width of the text by unioning all the line fragment used rects.
+   private func calculateTextWidth() -> CGFloat {
+      guard let layoutManager = layoutManager, let textContainer = textContainer else {
+         return NSView.noIntrinsicMetric
+      }
+
+      var enclosingRect: NSRect?
+
+      let extraLineFragmentUsedRect = layoutManager.extraLineFragmentUsedRect
+      if extraLineFragmentUsedRect != NSRect.zero {
+         enclosingRect = extraLineFragmentUsedRect
+      }
+
+      let glyphRange = layoutManager.glyphRange(for: textContainer)
+      layoutManager.enumerateLineFragments(forGlyphRange: glyphRange) { _, lineFragmentUsedRect, _, _, _ in
+         if let previousEnclosingRect = enclosingRect {
+            enclosingRect = previousEnclosingRect.union(lineFragmentUsedRect)
+         } else {
+            enclosingRect = lineFragmentUsedRect
+         }
+      }
+
+      return enclosingRect?.width ?? 0
+   }
+
+   private var _intrinsicContentSize = NSSize.zero {
+      didSet {
+         invalidateIntrinsicContentSize()
+      }
+   }
+
+   open override var intrinsicContentSize: NSSize {
+      return _intrinsicContentSize
    }
 
    // MARK: -
