@@ -154,7 +154,23 @@ open class AutoLayoutTextView: NSTextView {
    /// The default implementation of this method invalidates the intrinsic content size.
    @objc
    open func didCompleteLayout(_ notification: Notification) {
-      _intrinsicContentSize = calculateIntrinsicContentSize()
+      invalidateIntrinsicContentSize()
+   }
+
+   open override func invalidateIntrinsicContentSize() {
+      _intrinsicContentSize = nil
+      super.invalidateIntrinsicContentSize()
+   }
+
+   private var _intrinsicContentSize: NSSize?
+   open override var intrinsicContentSize: NSSize {
+      if let intrinsicContentSize = _intrinsicContentSize {
+         return intrinsicContentSize
+      } else {
+         let intrinsicContentSize = calculateIntrinsicContentSize()
+         _intrinsicContentSize = intrinsicContentSize
+         return intrinsicContentSize
+      }
    }
 
    private func calculateIntrinsicContentSize() -> NSSize {
@@ -162,15 +178,15 @@ open class AutoLayoutTextView: NSTextView {
          return NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
       }
 
+      let textHeight = layoutManager.usedRect(for: textContainer).height
+
       // The layout manager’s `usedRect(for:)` method returns (width of container, height of text).
       // We want to use the width of the text for the intrinsic content size, so we need to calculate
       // it ourselves.
-      var intrinsicContentSize = NSSize(width: calculateTextWidth(),
-                                        height: layoutManager.usedRect(for: textContainer).height)
-      intrinsicContentSize.width = (intrinsicContentSize.width + textContainerInset.width * 2).rounded(.up)
-      intrinsicContentSize.height = (intrinsicContentSize.height + textContainerInset.height * 2).rounded(.up)
+      let textWidth = calculateTextWidth()
 
-      return intrinsicContentSize
+      return NSSize(width: (textWidth + textContainerInset.width * 2).rounded(.up),
+                    height: (textHeight + textContainerInset.height * 2).rounded(.up))
    }
 
    /// Calculates the width of the text by unioning all the line fragment used rects.
@@ -196,15 +212,5 @@ open class AutoLayoutTextView: NSTextView {
       }
 
       return enclosingRect?.width ?? 0
-   }
-
-   private var _intrinsicContentSize = NSSize.zero {
-      didSet {
-         invalidateIntrinsicContentSize()
-      }
-   }
-
-   open override var intrinsicContentSize: NSSize {
-      return _intrinsicContentSize
    }
 }
