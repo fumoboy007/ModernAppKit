@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016-2017 Darren Mo.
+// Copyright © 2017 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,6 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#import <Cocoa/Cocoa.h>
+@import Cocoa;
 
-#import <ModernAppKit/EagerTextStorage.h>
+NS_ASSUME_NONNULL_BEGIN
+
+APPKIT_EXTERN NSNotificationName const EagerTextStorageWillChangeNotification NS_SWIFT_NAME(EagerTextStorage.willChange);
+
+/// A concrete `NSTextStorage` subclass that tells its `EagerLayoutManager` objects to
+/// perform layout after every edit.
+///
+/// - Note: This is implemented in Objective-C to avoid bridging costs to/from Swift. This
+///   improves text layout performance dramatically compared to the Swift implementation.
+@interface EagerTextStorage : NSTextStorage
+
+@property (readonly, nonatomic) BOOL isEditing;
+
+@end
+
+NS_ASSUME_NONNULL_END

@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E6354DA81F9A55C600FB35E4 /* EagerTextStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = E6354DA61F9A55C600FB35E4 /* EagerTextStorage.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		E6354DA91F9A55C600FB35E4 /* EagerTextStorage.m in Sources */ = {isa = PBXBuildFile; fileRef = E6354DA71F9A55C600FB35E4 /* EagerTextStorage.m */; };
+		E6354DAB1F9A621500FB35E4 /* EagerLayoutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6354DAA1F9A621500FB35E4 /* EagerLayoutManager.swift */; };
 		E67F84991D48384100FB35E4 /* ModernAppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E67F848F1D48384100FB35E4 /* ModernAppKit.framework */; };
 		E67F849E1D48384100FB35E4 /* ModernAppKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E67F849D1D48384100FB35E4 /* ModernAppKitTests.swift */; };
 		E67F84AD1D48392400FB35E4 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E67F84AC1D48392400FB35E4 /* Cocoa.framework */; };
@@ -28,6 +31,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		E6354DA61F9A55C600FB35E4 /* EagerTextStorage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EagerTextStorage.h; sourceTree = "<group>"; };
+		E6354DA71F9A55C600FB35E4 /* EagerTextStorage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EagerTextStorage.m; sourceTree = "<group>"; };
+		E6354DAA1F9A621500FB35E4 /* EagerLayoutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EagerLayoutManager.swift; sourceTree = "<group>"; };
 		E67F848F1D48384100FB35E4 /* ModernAppKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ModernAppKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E67F84931D48384100FB35E4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		E67F84981D48384100FB35E4 /* ModernAppKitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ModernAppKitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -62,6 +68,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E6354DAD1F9A63A900FB35E4 /* AutoLayoutTextView */ = {
+			isa = PBXGroup;
+			children = (
+				E67F84B21D48417900FB35E4 /* AutoLayoutTextView.swift */,
+				E6354DA61F9A55C600FB35E4 /* EagerTextStorage.h */,
+				E6354DA71F9A55C600FB35E4 /* EagerTextStorage.m */,
+				E6354DAA1F9A621500FB35E4 /* EagerLayoutManager.swift */,
+			);
+			path = AutoLayoutTextView;
+			sourceTree = "<group>";
+		};
 		E67F84851D48384100FB35E4 = {
 			isa = PBXGroup;
 			children = (
@@ -86,7 +103,7 @@
 			children = (
 				E67F84AE1D48394400FB35E4 /* ModernAppKit.h */,
 				E67F84B01D483A7700FB35E4 /* LayerView.swift */,
-				E67F84B21D48417900FB35E4 /* AutoLayoutTextView.swift */,
+				E6354DAD1F9A63A900FB35E4 /* AutoLayoutTextView */,
 				E67F84B71D48661F00FB35E4 /* ShadowView.swift */,
 				E67F84B61D48661F00FB35E4 /* CGRect+EdgeInsets.swift */,
 				E67F84931D48384100FB35E4 /* Info.plist */,
@@ -119,6 +136,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6354DA81F9A55C600FB35E4 /* EagerTextStorage.h in Headers */,
 				E67F84AF1D48394400FB35E4 /* ModernAppKit.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -228,6 +246,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E6354DAB1F9A621500FB35E4 /* EagerLayoutManager.swift in Sources */,
+				E6354DA91F9A55C600FB35E4 /* EagerTextStorage.m in Sources */,
 				E67F84B91D48661F00FB35E4 /* ShadowView.swift in Sources */,
 				E67F84B31D48417900FB35E4 /* AutoLayoutTextView.swift in Sources */,
 				E67F84B81D48661F00FB35E4 /* CGRect+EdgeInsets.swift in Sources */,
@@ -285,6 +305,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEFINES_MODULE = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -343,6 +364,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEFINES_MODULE = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -379,6 +401,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = mo.darren.ModernAppKit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_SWIFT3_OBJC_INFERENCE = Default;
 				SWIFT_VERSION = 4.0;
 			};
