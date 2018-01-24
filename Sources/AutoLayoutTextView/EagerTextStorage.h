@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2017 Darren Mo.
+// Copyright © 2017-2018 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 APPKIT_EXTERN NSNotificationName const EagerTextStorageWillChangeNotification NS_SWIFT_NAME(EagerTextStorage.willChange);
+APPKIT_EXTERN NSNotificationName const EagerTextStorageDidChangeNotification NS_SWIFT_NAME(EagerTextStorage.didChange);
 
 /// A concrete `NSTextStorage` subclass that tells its `EagerLayoutManager` objects to
 /// perform layout after every edit.

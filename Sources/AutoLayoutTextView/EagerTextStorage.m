@@ -27,6 +27,7 @@
 // MARK: Notifications
 
 NSNotificationName const EagerTextStorageWillChangeNotification = @"mo.darren.ModernAppKit.EagerTextStorage.willChange";
+NSNotificationName const EagerTextStorageDidChangeNotification = @"mo.darren.ModernAppKit.EagerTextStorage.didChange";
 
 // MARK: Backing Store
 
@@ -113,7 +114,7 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
    [super edited:editedMask range:editedRange changeInLength:delta];
 
    if (!self.isEditing) {
-      [self performFullLayout];
+      [self didEndEditing];
    }
 }
 
@@ -124,12 +125,19 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
    _editingCount -= 1;
 
    if (!self.isEditing) {
-      [self performFullLayout];
+      [self didEndEditing];
    }
 }
 
 - (void)willBeginEditing {
    [[NSNotificationCenter defaultCenter] postNotificationName:EagerTextStorageWillChangeNotification
+                                                       object:self];
+}
+
+- (void)didEndEditing {
+   [self performFullLayout];
+
+   [[NSNotificationCenter defaultCenter] postNotificationName:EagerTextStorageDidChangeNotification
                                                        object:self];
 }
 
