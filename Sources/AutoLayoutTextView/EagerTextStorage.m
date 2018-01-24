@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2017 Darren Mo.
+// Copyright © 2017-2018 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -99,6 +99,10 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
 // MARK: Custom Change Notifications
 
 - (void)beginEditing {
+   if (!self.isEditing) {
+      [self willBeginEditing];
+   }
+
    _editingCount += 1;
 
    [super beginEditing];
@@ -124,6 +128,11 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
    }
 }
 
+- (void)willBeginEditing {
+   [[NSNotificationCenter defaultCenter] postNotificationName:EagerTextStorageWillChangeNotification
+                                                       object:self];
+}
+
 - (void)performFullLayout {
    for (NSLayoutManager *layoutManager in self.layoutManagers) {
       if ([layoutManager isKindOfClass:[EagerLayoutManager class]]) {
@@ -144,16 +153,18 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
 }
 
 - (void)replaceCharactersInRange:(NSRange)range withString:(NSString *)str {
-   [[NSNotificationCenter defaultCenter] postNotificationName:EagerTextStorageWillChangeNotification
-                                                       object:self];
+   if (!self.isEditing) {
+      [self willBeginEditing];
+   }
 
    [_backingStore replaceCharactersInRange:range withString:str];
    [self edited:NSTextStorageEditedCharacters range:range changeInLength:(str.length - range.length)];
 }
 
 - (void)setAttributes:(NSDictionary<NSAttributedStringKey,id> *)attrs range:(NSRange)range {
-   [[NSNotificationCenter defaultCenter] postNotificationName:EagerTextStorageWillChangeNotification
-                                                       object:self];
+   if (!self.isEditing) {
+      [self willBeginEditing];
+   }
 
    [_backingStore setAttributes:attrs range:range];
    [self edited:NSTextStorageEditedAttributes range:range changeInLength:0];
