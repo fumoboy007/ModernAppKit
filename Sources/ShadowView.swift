@@ -231,12 +231,6 @@ public final class ShadowView: NSView {
       fileprivate struct ShadowImageProperties: Hashable {
          var shadowBlurRadius: CGFloat
          var shadowColor: NSColor
-
-         var hashValue: Int {
-            return
-               shadowBlurRadius.hashValue ^
-               shadowColor.hashValue
-         }
       }
 
       private class ImageContainer {
@@ -321,12 +315,4 @@ public final class ShadowView: NSView {
          return image
       }
    }
-}
-
-// MARK: - Operators
-
-fileprivate func ==(lhs: ShadowView.ShadowCache.ShadowImageProperties, rhs: ShadowView.ShadowCache.ShadowImageProperties) -> Bool {
-   return
-      lhs.shadowBlurRadius == rhs.shadowBlurRadius &&
-      lhs.shadowColor == rhs.shadowColor
 }
