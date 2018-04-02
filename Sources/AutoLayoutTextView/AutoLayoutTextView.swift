@@ -80,7 +80,7 @@ open class AutoLayoutTextView: NSTextView {
 
    public override convenience init(frame frameRect: NSRect) {
       // NSTextView defaults
-      let textContainer = NSTextContainer(size: NSSize(width: 0, height: 10000000))
+      let textContainer = NSTextContainer(size: NSSize(width: frameRect.width, height: 10000000))
       textContainer.widthTracksTextView = true
       textContainer.lineFragmentPadding = 0  // not an NSTextView default, but this value makes more sense
 
