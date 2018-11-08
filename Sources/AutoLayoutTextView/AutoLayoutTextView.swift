@@ -185,8 +185,15 @@ open class AutoLayoutTextView: NSTextView {
       // it ourselves.
       let textWidth = calculateTextWidth()
 
-      return NSSize(width: (textWidth + textContainerInset.width * 2).rounded(.up),
-                    height: (textHeight + textContainerInset.height * 2).rounded(.up))
+      let unitSquareSize = self.unitSquareSize
+
+      let intrinsicContentWidth =
+         (textWidth + textContainerInset.width * 2) * unitSquareSize.width
+      let intrinsicContentHeight =
+         (textHeight + textContainerInset.height * 2) * unitSquareSize.height
+
+      return NSSize(width: intrinsicContentWidth.rounded(.up),
+                    height: intrinsicContentHeight.rounded(.up))
    }
 
    /// Calculates the width of the text by unioning all the line fragment used rects.
@@ -212,5 +219,36 @@ open class AutoLayoutTextView: NSTextView {
       }
 
       return enclosingRect?.width ?? 0
+   }
+
+   // MARK: Responding to Scale Changes
+
+   private var unitSquareSize: NSSize {
+      return NSSize(width: AutoLayoutTextView.calculateUnitSquareLength(frameLength: frame.width,
+                                                                        boundsLength: bounds.width),
+                    height: AutoLayoutTextView.calculateUnitSquareLength(frameLength: frame.height,
+                                                                         boundsLength: bounds.height))
+   }
+
+   private static func calculateUnitSquareLength(frameLength: CGFloat,
+                                                 boundsLength: CGFloat) -> CGFloat {
+      let unitSquareLength = frameLength / boundsLength
+      guard unitSquareLength != 0 && unitSquareLength.isFinite else {
+         return 1
+      }
+
+      return unitSquareLength
+   }
+
+   open override func scaleUnitSquare(to newUnitSize: NSSize) {
+      // The `scaleUnitSquare(to:)` method is poorly named (rdar://45887722). Rather than
+      // replacing the current view scale with the new scale, it multiplies the new scale to the
+      // current view scale.
+      //
+      // Since the former behavior is the most intuitive based on the method name, we change the
+      // behavior to the former by resetting the scale to 1 before calling the NSView implementation.
+      setBoundsSize(frame.size)
+
+      super.scaleUnitSquare(to: newUnitSize)
    }
 }
