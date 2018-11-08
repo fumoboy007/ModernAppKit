@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016-2017 Darren Mo.
+// Copyright © 2016-2018 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -155,25 +155,28 @@ open class LayerView: NSView {
    }
 
    public required init?(coder: NSCoder) {
-      guard let backgroundColor = coder.decodeObject(forKey: LayerView.backgroundColorCoderKey) as? NSColor else {
-         return nil
-      }
-      self.backgroundColor = backgroundColor
-
-      let isBorderWidthInPoints = coder.decodeBool(forKey: LayerView.isBorderWidthInPointsCoderKey)
-      let borderWidth = CGFloat(coder.decodeDouble(forKey: LayerView.borderWidthCoderKey))
-      if isBorderWidthInPoints {
-         self._borderWidth = .points(borderWidth)
-      } else {
-         self._borderWidth = .pixels(borderWidth)
+      if let backgroundColor = coder.decodeObject(forKey: LayerView.backgroundColorCoderKey) as? NSColor {
+         self.backgroundColor = backgroundColor
       }
 
-      guard let borderColor = coder.decodeObject(forKey: LayerView.borderColorCoderKey) as? NSColor else {
-         return nil
+      if coder.containsValue(forKey: LayerView.isBorderWidthInPointsCoderKey) &&
+         coder.containsValue(forKey: LayerView.borderWidthCoderKey) {
+         let isBorderWidthInPoints = coder.decodeBool(forKey: LayerView.isBorderWidthInPointsCoderKey)
+         let borderWidth = CGFloat(coder.decodeDouble(forKey: LayerView.borderWidthCoderKey))
+         if isBorderWidthInPoints {
+            self._borderWidth = .points(borderWidth)
+         } else {
+            self._borderWidth = .pixels(borderWidth)
+         }
       }
-      self.borderColor = borderColor
 
-      self.cornerRadius = CGFloat(coder.decodeDouble(forKey: LayerView.cornerRadiusCoderKey))
+      if let borderColor = coder.decodeObject(forKey: LayerView.borderColorCoderKey) as? NSColor {
+         self.borderColor = borderColor
+      }
+
+      if coder.containsValue(forKey: LayerView.cornerRadiusCoderKey) {
+         self.cornerRadius = CGFloat(coder.decodeDouble(forKey: LayerView.cornerRadiusCoderKey))
+      }
 
       super.init(coder: coder)
 

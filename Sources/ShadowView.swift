@@ -169,10 +169,18 @@ public final class ShadowView: NSView {
 
       ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
 
-      self.shadowBlurRadius = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowBlurRadiusCoderKey))
-      self.shadowOffset.width = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetWidthCoderKey))
-      self.shadowOffset.height = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetHeightCoderKey))
-      self.shadowColor = coder.decodeObject(forKey: ShadowView.shadowColorCoderKey) as! NSColor
+      if coder.containsValue(forKey: ShadowView.shadowBlurRadiusCoderKey) {
+         self.shadowBlurRadius = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowBlurRadiusCoderKey))
+      }
+      if coder.containsValue(forKey: ShadowView.shadowOffsetWidthCoderKey) {
+         self.shadowOffset.width = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetWidthCoderKey))
+      }
+      if coder.containsValue(forKey: ShadowView.shadowOffsetHeightCoderKey) {
+         self.shadowOffset.height = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetHeightCoderKey))
+      }
+      if let shadowColor = coder.decodeObject(forKey: ShadowView.shadowColorCoderKey) as? NSColor {
+         self.shadowColor = shadowColor
+      }
    }
 
    public override func encode(with aCoder: NSCoder) {

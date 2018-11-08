@@ -117,12 +117,26 @@ open class AutoLayoutTextView: NSTextView {
    }
 
    public required init?(coder: NSCoder) {
-      self._textStorage = coder.decodeObject(forKey: AutoLayoutTextView.textStorageCoderKey) as! EagerTextStorage?
-      self._layoutManager = coder.decodeObject(forKey: AutoLayoutTextView.layoutManagerCoderKey) as! EagerLayoutManager?
+      if let textStorage = coder.decodeObject(forKey: AutoLayoutTextView.textStorageCoderKey) as? EagerTextStorage {
+         self._textStorage = textStorage
+      } else {
+         self._textStorage = EagerTextStorage()
+      }
+      if let layoutManager = coder.decodeObject(forKey: AutoLayoutTextView.layoutManagerCoderKey) as? EagerLayoutManager {
+         self._layoutManager = layoutManager
+      } else {
+         self._layoutManager = EagerLayoutManager()
+      }
 
       super.init(coder: coder)
 
       if let layoutManager = _layoutManager {
+         _textStorage?.addLayoutManager(layoutManager)
+
+         if let textContainer = textContainer {
+            layoutManager.addTextContainer(textContainer)
+         }
+
          NotificationCenter.default.addObserver(self,
                                                 selector: #selector(didCompleteLayout(_:)),
                                                 name: EagerLayoutManager.didCompleteLayout,
