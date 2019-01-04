@@ -105,12 +105,7 @@ open class AutoLayoutTextView: NSTextView {
 
       super.init(frame: frameRect, textContainer: container)
 
-      if let layoutManager = _layoutManager {
-         NotificationCenter.default.addObserver(self,
-                                                selector: #selector(didCompleteLayout(_:)),
-                                                name: EagerLayoutManager.didCompleteLayout,
-                                                object: layoutManager)
-      }
+      commonInit()
    }
 
    public required init?(coder: NSCoder) {
@@ -139,7 +134,18 @@ open class AutoLayoutTextView: NSTextView {
             textContainer.textView = self
             self.textContainer = textContainer
          }
+      }
 
+      commonInit()
+   }
+
+   private func commonInit() {
+      minSize = NSSize.zero
+      maxSize = NSSize(width: CGFloat.infinity, height: CGFloat.infinity)
+      isHorizontallyResizable = false
+      isVerticallyResizable = false
+
+      if let layoutManager = _layoutManager {
          NotificationCenter.default.addObserver(self,
                                                 selector: #selector(didCompleteLayout(_:)),
                                                 name: EagerLayoutManager.didCompleteLayout,
@@ -165,10 +171,10 @@ open class AutoLayoutTextView: NSTextView {
    }
 
    private static func makeDefaultTextContainer(withTextViewWidth textViewWidth: CGFloat) -> NSTextContainer {
-      // NSTextView defaults
-      let textContainer = NSTextContainer(size: NSSize(width: textViewWidth, height: 10000000))
+      let textContainer = NSTextContainer(size: NSSize(width: textViewWidth, height: CGFloat.infinity))
       textContainer.widthTracksTextView = true
-      textContainer.lineFragmentPadding = 0  // not an NSTextView default, but this value makes more sense
+      textContainer.heightTracksTextView = false
+      textContainer.lineFragmentPadding = 0
 
       return textContainer
    }
