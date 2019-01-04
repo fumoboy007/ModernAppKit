@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016-2018 Darren Mo.
+// Copyright © 2016-2019 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -79,10 +79,7 @@ open class AutoLayoutTextView: NSTextView {
    private static let layoutManagerCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView._layoutManager"
 
    public override convenience init(frame frameRect: NSRect) {
-      // NSTextView defaults
-      let textContainer = NSTextContainer(size: NSSize(width: frameRect.width, height: 10000000))
-      textContainer.widthTracksTextView = true
-      textContainer.lineFragmentPadding = 0  // not an NSTextView default, but this value makes more sense
+      let textContainer = AutoLayoutTextView.makeDefaultTextContainer(withTextViewWidth: frameRect.width)
 
       let layoutManager = EagerLayoutManager()
       layoutManager.addTextContainer(textContainer)
@@ -135,6 +132,12 @@ open class AutoLayoutTextView: NSTextView {
 
          if let textContainer = textContainer {
             layoutManager.addTextContainer(textContainer)
+         } else {
+            let textContainer = AutoLayoutTextView.makeDefaultTextContainer(withTextViewWidth: frame.width)
+            layoutManager.addTextContainer(textContainer)
+
+            textContainer.textView = self
+            self.textContainer = textContainer
          }
 
          NotificationCenter.default.addObserver(self,
@@ -159,6 +162,15 @@ open class AutoLayoutTextView: NSTextView {
                                                    name: EagerLayoutManager.didCompleteLayout,
                                                    object: layoutManager)
       }
+   }
+
+   private static func makeDefaultTextContainer(withTextViewWidth textViewWidth: CGFloat) -> NSTextContainer {
+      // NSTextView defaults
+      let textContainer = NSTextContainer(size: NSSize(width: textViewWidth, height: 10000000))
+      textContainer.widthTracksTextView = true
+      textContainer.lineFragmentPadding = 0  // not an NSTextView default, but this value makes more sense
+
+      return textContainer
    }
 
    // MARK: Intrinsic Content Size
