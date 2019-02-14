@@ -237,7 +237,7 @@ open class AutoLayoutTextView: NSTextView {
       var enclosingRect: NSRect?
 
       let extraLineFragmentUsedRect = layoutManager.extraLineFragmentUsedRect
-      if extraLineFragmentUsedRect != NSRect.zero {
+      if extraLineFragmentUsedRect.size != NSSize.zero {
          enclosingRect = extraLineFragmentUsedRect
       }
 
