@@ -38,6 +38,8 @@ public class Label: AutoLayoutTextView {
    }
 
    private func commonInit() {
+      setAccessibilityRole(.staticText)
+
       isEditable = false
       drawsBackground = false
    }
