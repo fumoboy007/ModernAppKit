@@ -214,7 +214,7 @@ open class LayerView: NSView {
          "cornerRadius"
       ]
       for propertyName in animatableProperties {
-         let key = NSAnimatablePropertyKey(rawValue: propertyName)
+         let key = propertyName as NSAnimatablePropertyKey
          animations[key] = CABasicAnimation(keyPath: propertyName)
       }
    }
@@ -254,7 +254,7 @@ open class LayerView: NSView {
          return animationObj
       }
 
-      switch key.rawValue {
+      switch key {
       case "animatableBorderWidthInPoints":
          guard animation.fromValue == nil else {
             break
