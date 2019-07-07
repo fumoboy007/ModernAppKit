@@ -197,7 +197,7 @@
 						CreatedOnToolsVersion = 8.0;
 						DevelopmentTeam = PVLQ49LAH3;
 						DevelopmentTeamName = "Darren Mo";
-						LastSwiftMigration = 0900;
+						LastSwiftMigration = 1020;
 						ProvisioningStyle = Automatic;
 					};
 					E67F84971D48384100FB35E4 = {
@@ -214,6 +214,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = E67F84851D48384100FB35E4;
