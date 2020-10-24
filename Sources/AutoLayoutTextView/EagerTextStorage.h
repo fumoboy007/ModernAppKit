@@ -30,8 +30,8 @@ APPKIT_EXTERN NSNotificationName const EagerTextStorageDidChangeNotification NS_
 /// A concrete `NSTextStorage` subclass that tells its `EagerLayoutManager` objects to
 /// perform layout after every edit.
 ///
-/// - Note: This is implemented in Objective-C to avoid bridging costs to/from Swift. This
-///   improves text layout performance dramatically compared to the Swift implementation.
+/// - Note: This is implemented in Objective-C to avoid bridging costs to/from Swift (SR-6197).
+///   This improves text layout performance dramatically compared to the Swift implementation.
 @interface EagerTextStorage : NSTextStorage
 
 @property (readonly, nonatomic) BOOL isEditing;
