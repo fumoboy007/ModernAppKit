@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2017-2018 Darren Mo.
+// Copyright © 2017-2020 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#import "EagerTextStorage.h"
+#import "MAKEagerTextStorage.h"
 
-#import <ModernAppKit/ModernAppKit-Swift.h>
+#import "MAKEagerLayoutManaging.h"
+
+NS_ASSUME_NONNULL_BEGIN
 
 // MARK: Notifications
 
-NSNotificationName const EagerTextStorageWillChangeNotification = @"mo.darren.ModernAppKit.EagerTextStorage.willChange";
-NSNotificationName const EagerTextStorageDidChangeNotification = @"mo.darren.ModernAppKit.EagerTextStorage.didChange";
+NSNotificationName const MAKEagerTextStorageWillChangeNotification = @"mo.darren.ModernAppKit.EagerTextStorage.willChange";
+NSNotificationName const MAKEagerTextStorageDidChangeNotification = @"mo.darren.ModernAppKit.EagerTextStorage.didChange";
 
 // MARK: Backing Store
 
@@ -41,11 +43,11 @@ NSNotificationName const EagerTextStorageDidChangeNotification = @"mo.darren.Mod
 ///     which uses __NSCFString, then the copy is O(n). If the backing store is an
 ///     NSConcreteTextStorage, which uses NSConcreteNotifyingMutableAttributedString, which
 ///     uses NSBigMutableString, then the copy is O(1).
-#define EagerTextStorageBackingStoreClass ([NSTextStorage class])
+#define MAKEagerTextStorageBackingStoreClass ([NSTextStorage class])
 
 // MARK: -
 
-@implementation EagerTextStorage {
+@implementation MAKEagerTextStorage {
    NSMutableAttributedString *_backingStore;
 
    NSInteger _editingCount;
@@ -63,29 +65,32 @@ NSNotificationName const EagerTextStorageDidChangeNotification = @"mo.darren.Mod
    self = [super init];
 
    if (self) {
-      _backingStore = [[EagerTextStorageBackingStoreClass alloc] init];
+      _backingStore = [[MAKEagerTextStorageBackingStoreClass alloc] init];
    }
 
    return self;
 }
 
-- (id)initWithPasteboardPropertyList:(id)propertyList ofType:(NSPasteboardType)type {
+- (nullable id)initWithPasteboardPropertyList:(id)propertyList ofType:(NSPasteboardType)type {
    self = [super initWithPasteboardPropertyList:propertyList ofType:type];
 
    if (self) {
-      _backingStore = [[EagerTextStorageBackingStoreClass alloc] init];
+      _backingStore = [[MAKEagerTextStorageBackingStoreClass alloc] init];
    }
 
    return self;
 }
 
-static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.ModernAppKit.EagerTextStorage._backingStore";
+// MARK: Serialization/Deserialization
 
-- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+typedef NSString *MAKEagerTextStorageCoderKey NS_EXTENSIBLE_STRING_ENUM;
+static MAKEagerTextStorageCoderKey const MAKEagerTextStorageCoderKeyBackingStore = @"mo.darren.ModernAppKit.EagerTextStorage._backingStore";
+
+- (nullable instancetype)initWithCoder:(NSCoder *)aDecoder {
    self = [super initWithCoder:aDecoder];
 
    if (self) {
-      _backingStore = [aDecoder decodeObjectForKey:EagerTextStorageBackingStoreCoderKey];
+      _backingStore = [aDecoder decodeObjectForKey:MAKEagerTextStorageCoderKeyBackingStore];
    }
 
    return self;
@@ -94,13 +99,13 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
 - (void)encodeWithCoder:(NSCoder *)aCoder {
    [super encodeWithCoder:aCoder];
 
-   [aCoder encodeObject:_backingStore forKey:EagerTextStorageBackingStoreCoderKey];
+   [aCoder encodeObject:_backingStore forKey:MAKEagerTextStorageCoderKeyBackingStore];
 }
 
 // MARK: Custom Change Notifications
 
 - (void)beginEditing {
-   if (!self.isEditing) {
+   if (!self.editing) {
       [self willBeginEditing];
    }
 
@@ -113,7 +118,7 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
 - (void)edited:(NSTextStorageEditActions)editedMask range:(NSRange)editedRange changeInLength:(NSInteger)delta {
    [super edited:editedMask range:editedRange changeInLength:delta];
 
-   if (!self.isEditing) {
+   if (!self.editing) {
       [self didEndEditing];
    }
 }
@@ -124,27 +129,27 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
 
    _editingCount -= 1;
 
-   if (!self.isEditing) {
+   if (!self.editing) {
       [self didEndEditing];
    }
 }
 
 - (void)willBeginEditing {
-   [[NSNotificationCenter defaultCenter] postNotificationName:EagerTextStorageWillChangeNotification
+   [[NSNotificationCenter defaultCenter] postNotificationName:MAKEagerTextStorageWillChangeNotification
                                                        object:self];
 }
 
 - (void)didEndEditing {
    [self performFullLayout];
 
-   [[NSNotificationCenter defaultCenter] postNotificationName:EagerTextStorageDidChangeNotification
+   [[NSNotificationCenter defaultCenter] postNotificationName:MAKEagerTextStorageDidChangeNotification
                                                        object:self];
 }
 
 - (void)performFullLayout {
    for (NSLayoutManager *layoutManager in self.layoutManagers) {
-      if ([layoutManager isKindOfClass:[EagerLayoutManager class]]) {
-         EagerLayoutManager *eagerLayoutManager = (EagerLayoutManager *)layoutManager;
+      if ([layoutManager conformsToProtocol:@protocol(MAKEagerLayoutManaging)]) {
+         id<MAKEagerLayoutManaging> eagerLayoutManager = (id<MAKEagerLayoutManaging>)layoutManager;
          [eagerLayoutManager performFullLayout];
       }
    }
@@ -156,12 +161,12 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
    return _backingStore.string;
 }
 
-- (NSDictionary<NSAttributedStringKey,id> *)attributesAtIndex:(NSUInteger)location effectiveRange:(NSRangePointer)range {
+- (NSDictionary<NSAttributedStringKey,id> *)attributesAtIndex:(NSUInteger)location effectiveRange:(nullable NSRangePointer)range {
    return [_backingStore attributesAtIndex:location effectiveRange:range];
 }
 
 - (void)replaceCharactersInRange:(NSRange)range withString:(NSString *)str {
-   if (!self.isEditing) {
+   if (!self.editing) {
       [self willBeginEditing];
    }
 
@@ -169,8 +174,8 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
    [self edited:NSTextStorageEditedCharacters range:range changeInLength:(str.length - range.length)];
 }
 
-- (void)setAttributes:(NSDictionary<NSAttributedStringKey,id> *)attrs range:(NSRange)range {
-   if (!self.isEditing) {
+- (void)setAttributes:(nullable NSDictionary<NSAttributedStringKey,id> *)attrs range:(NSRange)range {
+   if (!self.editing) {
       [self willBeginEditing];
    }
 
@@ -179,3 +184,5 @@ static NSString *const EagerTextStorageBackingStoreCoderKey = @"mo.darren.Modern
 }
 
 @end
+
+NS_ASSUME_NONNULL_END

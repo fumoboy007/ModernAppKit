@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016-2018 Darren Mo.
+// Copyright © 2016-2020 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ import Cocoa
 
 /// A container view that draws a rectangular shadow underneath its content view
 /// in a performant manner.
-public final class ShadowView: NSView {
+public class ShadowView: NSView {
    // MARK: Shadow Cache
 
    private static let shadowCache = ShadowCache()
@@ -148,37 +148,49 @@ public final class ShadowView: NSView {
       return insets
    }
 
-   // MARK: Initialization
-
-   private static let shadowBlurRadiusCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowBlurRadius"
-   private static let shadowOffsetWidthCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowOffsetWidth"
-   private static let shadowOffsetHeightCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowOffsetHeight"
-   private static let shadowColorCoderKey = "mo.darren.ModernAppKit.ShadowView.shadowColor"
+   // MARK: Initialization/Deinitialization
 
    public override init(frame frameRect: NSRect) {
       super.init(frame: frameRect)
 
-      self.wantsLayer = true
-      self.layerContentsRedrawPolicy = .duringViewResize
+      commonInit()
+   }
+
+   private func commonInit() {
+      wantsLayer = true
+      layerContentsRedrawPolicy = .duringViewResize
 
       ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+   }
+
+   deinit {
+      ShadowView.shadowCache.releaseShadowImage(with: shadowImageProperties)
+   }
+
+   // MARK: Serialization/Deserialization
+
+   private enum CoderKey {
+      static let shadowBlurRadius = "mo.darren.ModernAppKit.ShadowView.shadowBlurRadius"
+      static let shadowOffsetWidth = "mo.darren.ModernAppKit.ShadowView.shadowOffsetWidth"
+      static let shadowOffsetHeight = "mo.darren.ModernAppKit.ShadowView.shadowOffsetHeight"
+      static let shadowColor = "mo.darren.ModernAppKit.ShadowView.shadowColor"
    }
 
    public required init?(coder: NSCoder) {
       super.init(coder: coder)
 
-      ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+      commonInit()
 
-      if coder.containsValue(forKey: ShadowView.shadowBlurRadiusCoderKey) {
-         self.shadowBlurRadius = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowBlurRadiusCoderKey))
+      if coder.containsValue(forKey: CoderKey.shadowBlurRadius) {
+         shadowBlurRadius = CGFloat(coder.decodeDouble(forKey: CoderKey.shadowBlurRadius))
       }
-      if coder.containsValue(forKey: ShadowView.shadowOffsetWidthCoderKey) {
-         self.shadowOffset.width = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetWidthCoderKey))
+      if coder.containsValue(forKey: CoderKey.shadowOffsetWidth) {
+         shadowOffset.width = CGFloat(coder.decodeDouble(forKey: CoderKey.shadowOffsetWidth))
       }
-      if coder.containsValue(forKey: ShadowView.shadowOffsetHeightCoderKey) {
-         self.shadowOffset.height = CGFloat(coder.decodeDouble(forKey: ShadowView.shadowOffsetHeightCoderKey))
+      if coder.containsValue(forKey: CoderKey.shadowOffsetHeight) {
+         shadowOffset.height = CGFloat(coder.decodeDouble(forKey: CoderKey.shadowOffsetHeight))
       }
-      if let shadowColor = coder.decodeObject(forKey: ShadowView.shadowColorCoderKey) as? NSColor {
+      if let shadowColor = coder.decodeObject(forKey: CoderKey.shadowColor) as? NSColor {
          self.shadowColor = shadowColor
       }
    }
@@ -186,14 +198,10 @@ public final class ShadowView: NSView {
    public override func encode(with aCoder: NSCoder) {
       super.encode(with: aCoder)
 
-      aCoder.encode(Double(shadowBlurRadius), forKey: ShadowView.shadowBlurRadiusCoderKey)
-      aCoder.encode(Double(shadowOffset.width), forKey: ShadowView.shadowOffsetWidthCoderKey)
-      aCoder.encode(Double(shadowOffset.height), forKey: ShadowView.shadowOffsetHeightCoderKey)
-      aCoder.encode(shadowColor, forKey: ShadowView.shadowColorCoderKey)
-   }
-
-   deinit {
-      ShadowView.shadowCache.releaseShadowImage(with: shadowImageProperties)
+      aCoder.encode(Double(shadowBlurRadius), forKey: CoderKey.shadowBlurRadius)
+      aCoder.encode(Double(shadowOffset.width), forKey: CoderKey.shadowOffsetWidth)
+      aCoder.encode(Double(shadowOffset.height), forKey: CoderKey.shadowOffsetHeight)
+      aCoder.encode(shadowColor, forKey: CoderKey.shadowColor)
    }
 
    // MARK: Updating the Layer
@@ -305,20 +313,22 @@ public final class ShadowView: NSView {
                                         bottom: shadow.shadowBlurRadius * 2,
                                         right: shadow.shadowBlurRadius * 2)
 
-         image.lockFocus()
-         defer {
-            image.unlockFocus()
+         do {
+            image.lockFocus()
+            defer {
+               image.unlockFocus()
+            }
+
+            shadow.set()
+
+            let offscreenRect = NSRect(x: shadow.shadowBlurRadius,
+                                       y: shadow.shadowBlurRadius - imageSize.height,
+                                       width: imageSize.width - shadow.shadowBlurRadius * 2,
+                                       height: imageSize.height - shadow.shadowBlurRadius * 2)
+
+            NSColor.black.set()
+            offscreenRect.fill()
          }
-
-         shadow.set()
-
-         let offscreenRect = NSRect(x: shadow.shadowBlurRadius,
-                                    y: shadow.shadowBlurRadius - imageSize.height,
-                                    width: imageSize.width - shadow.shadowBlurRadius * 2,
-                                    height: imageSize.height - shadow.shadowBlurRadius * 2)
-
-         NSColor.black.set()
-         offscreenRect.fill()
 
          return image
       }

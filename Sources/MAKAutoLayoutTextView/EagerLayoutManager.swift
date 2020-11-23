@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016-2017 Darren Mo.
+// Copyright © 2016-2020 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,23 +21,26 @@
 // SOFTWARE.
 
 import Cocoa
+import MAKEagerTextStorage
 
 /// An `NSLayoutManager` subclass that performs layout immediately whenever text changes
-/// or whenever the geometry of a text container changes. `EagerLayoutManager` posts a
-/// `.didCompleteLayout` notification when it completes layout. The text storage must be
-/// an instance of `EagerTextStorage`.
-open class EagerLayoutManager: NSLayoutManager {
+/// or whenever the geometry of a text container changes.
+///
+/// - Attention: The text storage must be an instance of `EagerTextStorage`.
+open class EagerLayoutManager: NSLayoutManager, EagerLayoutManaging {
    // MARK: Notifications
 
-   public static let didCompleteLayout = Notification.Name(rawValue: "mo.darren.ModernAppKit.EagerLayoutManager.didCompleteLayout")
+   public static let didCompleteLayoutNotification = Notification.Name(rawValue: "mo.darren.ModernAppKit.EagerLayoutManager.didCompleteLayout")
 
    // MARK: Text Storage
 
    open override var textStorage: NSTextStorage? {
       didSet {
          if let textStorage = textStorage {
-            precondition(textStorage is EagerTextStorage, "EagerLayoutManager only accepts EagerTextStorage.")
-            _textStorage = textStorage as? EagerTextStorage
+            guard let eagerTextStorage = textStorage as? EagerTextStorage else {
+               preconditionFailure("EagerLayoutManager only accepts EagerTextStorage.")
+            }
+            _textStorage = eagerTextStorage
          }
       }
    }
@@ -52,25 +55,35 @@ open class EagerLayoutManager: NSLayoutManager {
 
    // MARK: Initialization
 
-   private static let textStorageCoderKey = "mo.darren.ModernAppKit.EagerLayoutManager._textStorage"
-
    public override init() {
       super.init()
 
-      // Since we are performing layout eagerly, we don’t need background layout
-      self.backgroundLayoutEnabled = false
+      commonInit()
+   }
+
+   private func commonInit() {
+      // We want to perform layout synchronously instead of asynchronously.
+      backgroundLayoutEnabled = false
+   }
+
+   // MARK: Serialization/Deserialization
+
+   private enum CoderKey {
+      static let textStorage = "mo.darren.ModernAppKit.EagerLayoutManager._textStorage"
    }
 
    public required init?(coder: NSCoder) {
-      self._textStorage = coder.decodeObject(forKey: EagerLayoutManager.textStorageCoderKey) as? EagerTextStorage
+      self._textStorage = coder.decodeObject(forKey: CoderKey.textStorage) as? EagerTextStorage
 
       super.init(coder: coder)
+
+      commonInit()
    }
 
    open override func encode(with aCoder: NSCoder) {
       super.encode(with: aCoder)
 
-      aCoder.encode(self._textStorage, forKey: EagerLayoutManager.textStorageCoderKey)
+      aCoder.encode(self._textStorage, forKey: CoderKey.textStorage)
    }
 
    // MARK: Performing Layout
@@ -83,7 +96,6 @@ open class EagerLayoutManager: NSLayoutManager {
       }
    }
 
-   @objc
    open func performFullLayout() {
       guard let textStorage = _textStorage else {
          return
@@ -94,7 +106,7 @@ open class EagerLayoutManager: NSLayoutManager {
 
       ensureLayout(forCharacterRange: NSRange(location: 0, length: textStorage.length))
 
-      NotificationCenter.default.post(name: EagerLayoutManager.didCompleteLayout,
+      NotificationCenter.default.post(name: EagerLayoutManager.didCompleteLayoutNotification,
                                       object: self)
    }
 }

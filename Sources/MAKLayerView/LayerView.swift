@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016-2018 Darren Mo.
+// Copyright © 2016-2020 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,15 +22,17 @@
 
 import Cocoa
 
-/// A layer-backed view with additional APIs for setting background color,
-/// border width, border color, and corner radius. Use if you do not need
-/// to do custom drawing. Supports animations.
+/// A layer-backed view with additional APIs for setting background color, border width, border color, and corner radius.
+///
+/// Use if you do not need to do custom drawing.
+///
+/// Supports animations.
 open class LayerView: NSView {
    // MARK: Layer Properties
 
    public enum BorderWidth {
-      case points(_: CGFloat)
-      case pixels(_: CGFloat)
+      case points(CGFloat)
+      case pixels(CGFloat)
 
       func inPoints(usingScale contentsScale: CGFloat) -> CGFloat {
          switch self {
@@ -53,10 +55,13 @@ open class LayerView: NSView {
       }
    }
 
-   /// The background color of the view. Corresponds to the
-   /// `backgroundColor` property of `CALayer`. Animatable.
+   /// The background color of the view.
    ///
    /// The default value is no color.
+   ///
+   /// Animatable.
+   ///
+   /// - Remark: Corresponds to the `CALayer.backgroundColor` property.
    @objc
    public dynamic var backgroundColor = NSColor.clear {
       didSet {
@@ -64,13 +69,14 @@ open class LayerView: NSView {
       }
    }
 
-   /// The width of the border around the view. Corresponds to the
-   /// `borderWidth` property of `CALayer`.
+   /// The width of the border around the view.
    ///
    /// To animate, use `animatableBorderWidthInPoints` or
    /// `animatableBorderWidthInPixels`.
    ///
    /// The default value is 0.
+   ///
+   /// - Remark: Corresponds to the `CALayer.borderWidth` property.
    public var borderWidth: BorderWidth {
       get {
          return _borderWidth
@@ -118,10 +124,13 @@ open class LayerView: NSView {
 
    private var contentsScale: CGFloat = 1.0
 
-   /// The color of the border around the view. Corresponds to the
-   /// `borderColor` property of `CALayer`. Animatable.
+   /// The color of the border around the view.
    ///
    /// The default value is opaque black.
+   ///
+   /// Animatable.
+   ///
+   /// - Remark: Corresponds to the `CALayer.borderColor` property.
    @objc
    public dynamic var borderColor = NSColor.black {
       didSet {
@@ -129,10 +138,13 @@ open class LayerView: NSView {
       }
    }
 
-   /// The radius of the rounded corners of the view. Corresponds to the
-   /// `cornerRadius` property of `CALayer`. Animatable.
+   /// The radius of the rounded corners of the view.
    ///
    /// The default value is 0.
+   ///
+   /// Animatable.
+   ///
+   /// - Remark: Corresponds to the `CALayer.cornerRadius` property.
    @objc
    public dynamic var cornerRadius: CGFloat = 0 {
       didSet {
@@ -142,64 +154,10 @@ open class LayerView: NSView {
 
    // MARK: Initialization
 
-   private static let backgroundColorCoderKey = "mo.darren.ModernAppKit.LayerView.backgroundColor"
-   private static let isBorderWidthInPointsCoderKey = "mo.darren.ModernAppKit.LayerView.isBorderWidthInPoints"
-   private static let borderWidthCoderKey = "mo.darren.ModernAppKit.LayerView.borderWidth"
-   private static let borderColorCoderKey = "mo.darren.ModernAppKit.LayerView.borderColor"
-   private static let cornerRadiusCoderKey = "mo.darren.ModernAppKit.LayerView.cornerRadius"
-
    public override init(frame frameRect: NSRect) {
       super.init(frame: frameRect)
 
       commonInit()
-   }
-
-   public required init?(coder: NSCoder) {
-      if let backgroundColor = coder.decodeObject(forKey: LayerView.backgroundColorCoderKey) as? NSColor {
-         self.backgroundColor = backgroundColor
-      }
-
-      if coder.containsValue(forKey: LayerView.isBorderWidthInPointsCoderKey) &&
-         coder.containsValue(forKey: LayerView.borderWidthCoderKey) {
-         let isBorderWidthInPoints = coder.decodeBool(forKey: LayerView.isBorderWidthInPointsCoderKey)
-         let borderWidth = CGFloat(coder.decodeDouble(forKey: LayerView.borderWidthCoderKey))
-         if isBorderWidthInPoints {
-            self._borderWidth = .points(borderWidth)
-         } else {
-            self._borderWidth = .pixels(borderWidth)
-         }
-      }
-
-      if let borderColor = coder.decodeObject(forKey: LayerView.borderColorCoderKey) as? NSColor {
-         self.borderColor = borderColor
-      }
-
-      if coder.containsValue(forKey: LayerView.cornerRadiusCoderKey) {
-         self.cornerRadius = CGFloat(coder.decodeDouble(forKey: LayerView.cornerRadiusCoderKey))
-      }
-
-      super.init(coder: coder)
-
-      commonInit()
-   }
-
-   open override func encode(with aCoder: NSCoder) {
-      super.encode(with: aCoder)
-
-      aCoder.encode(backgroundColor, forKey: LayerView.backgroundColorCoderKey)
-
-      switch borderWidth {
-      case .points(let borderWidthInPoints):
-         aCoder.encode(true, forKey: LayerView.isBorderWidthInPointsCoderKey)
-         aCoder.encode(Double(borderWidthInPoints), forKey: LayerView.borderWidthCoderKey)
-
-      case .pixels(let borderWidthInPixels):
-         aCoder.encode(false, forKey: LayerView.isBorderWidthInPointsCoderKey)
-         aCoder.encode(Double(borderWidthInPixels), forKey: LayerView.borderWidthCoderKey)
-      }
-
-      aCoder.encode(borderColor, forKey: LayerView.borderColorCoderKey)
-      aCoder.encode(Double(cornerRadius), forKey: LayerView.cornerRadiusCoderKey)
    }
 
    private func commonInit() {
@@ -217,6 +175,64 @@ open class LayerView: NSView {
          let key = propertyName as NSAnimatablePropertyKey
          animations[key] = CABasicAnimation(keyPath: propertyName)
       }
+   }
+
+   // MARK: Serialization/Deserialization
+
+   private enum CoderKey {
+      static let backgroundColor = "mo.darren.ModernAppKit.LayerView.backgroundColor"
+      static let isBorderWidthInPoints = "mo.darren.ModernAppKit.LayerView.isBorderWidthInPoints"
+      static let borderWidth = "mo.darren.ModernAppKit.LayerView.borderWidth"
+      static let borderColor = "mo.darren.ModernAppKit.LayerView.borderColor"
+      static let cornerRadius = "mo.darren.ModernAppKit.LayerView.cornerRadius"
+   }
+
+   public required init?(coder: NSCoder) {
+      if let backgroundColor = coder.decodeObject(forKey: CoderKey.backgroundColor) as? NSColor {
+         self.backgroundColor = backgroundColor
+      }
+
+      if coder.containsValue(forKey: CoderKey.isBorderWidthInPoints) &&
+         coder.containsValue(forKey: CoderKey.borderWidth) {
+         let isBorderWidthInPoints = coder.decodeBool(forKey: CoderKey.isBorderWidthInPoints)
+         let borderWidth = CGFloat(coder.decodeDouble(forKey: CoderKey.borderWidth))
+         if isBorderWidthInPoints {
+            self._borderWidth = .points(borderWidth)
+         } else {
+            self._borderWidth = .pixels(borderWidth)
+         }
+      }
+
+      if let borderColor = coder.decodeObject(forKey: CoderKey.borderColor) as? NSColor {
+         self.borderColor = borderColor
+      }
+
+      if coder.containsValue(forKey: CoderKey.cornerRadius) {
+         self.cornerRadius = CGFloat(coder.decodeDouble(forKey: CoderKey.cornerRadius))
+      }
+
+      super.init(coder: coder)
+
+      commonInit()
+   }
+
+   open override func encode(with aCoder: NSCoder) {
+      super.encode(with: aCoder)
+
+      aCoder.encode(backgroundColor, forKey: CoderKey.backgroundColor)
+
+      switch borderWidth {
+      case .points(let borderWidthInPoints):
+         aCoder.encode(true, forKey: CoderKey.isBorderWidthInPoints)
+         aCoder.encode(Double(borderWidthInPoints), forKey: CoderKey.borderWidth)
+
+      case .pixels(let borderWidthInPixels):
+         aCoder.encode(false, forKey: CoderKey.isBorderWidthInPoints)
+         aCoder.encode(Double(borderWidthInPixels), forKey: CoderKey.borderWidth)
+      }
+
+      aCoder.encode(borderColor, forKey: CoderKey.borderColor)
+      aCoder.encode(Double(cornerRadius), forKey: CoderKey.cornerRadius)
    }
 
    // MARK: Updating the Layer

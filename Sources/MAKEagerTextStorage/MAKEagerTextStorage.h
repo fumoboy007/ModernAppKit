@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2017-2018 Darren Mo.
+// Copyright © 2017-2020 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,17 +24,25 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-APPKIT_EXTERN NSNotificationName const EagerTextStorageWillChangeNotification NS_SWIFT_NAME(EagerTextStorage.willChange);
-APPKIT_EXTERN NSNotificationName const EagerTextStorageDidChangeNotification NS_SWIFT_NAME(EagerTextStorage.didChange);
+APPKIT_EXTERN NSNotificationName const MAKEagerTextStorageWillChangeNotification NS_SWIFT_NAME(EagerTextStorage.willChangeNotification);
+APPKIT_EXTERN NSNotificationName const MAKEagerTextStorageDidChangeNotification NS_SWIFT_NAME(EagerTextStorage.didChangeNotification);
 
-/// A concrete `NSTextStorage` subclass that tells its `EagerLayoutManager` objects to
+/// A concrete `NSTextStorage` subclass that tells its `MAKEagerLayoutManaging` objects to
 /// perform layout after every edit.
 ///
+/// - Remark: At first glance, we might be able to use
+///           `-[NSLayoutManager processEditingForTextStorage:edited:range:changeInLength:invalidatedRange:]`,
+///           which is called automatically by `NSTextStorage` at the end of editing. That would
+///           eliminate the need for this subclass. However, attempting to perform layout from
+///           within that method causes an exception to be thrown because `NSTextStorage`
+///           has not actually ended the edit yet.
+///
 /// - Note: This is implemented in Objective-C to avoid bridging costs to/from Swift (SR-6197).
-///   This improves text layout performance dramatically compared to the Swift implementation.
-@interface EagerTextStorage : NSTextStorage
+///         This improves text layout performance dramatically compared to the Swift implementation.
+NS_SWIFT_NAME(EagerTextStorage)
+@interface MAKEagerTextStorage : NSTextStorage
 
-@property (readonly, nonatomic) BOOL isEditing;
+@property (readonly, nonatomic, getter=isEditing) BOOL editing;
 
 @end
 

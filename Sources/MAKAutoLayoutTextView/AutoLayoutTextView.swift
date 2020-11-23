@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2016-2019 Darren Mo.
+// Copyright © 2016-2020 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,9 +21,13 @@
 // SOFTWARE.
 
 import Cocoa
+import MAKEagerTextStorage
 
 /// An `NSTextView` subclass that implements `intrinsicContentSize` so that the text view
 /// can participate in layout outside of a scroll view.
+///
+/// - Attention: The text storage must be an instance of `EagerTextStorage`.
+/// - Attention: The layout manager must be an instance of `EagerLayoutManager`.
 open class AutoLayoutTextView: NSTextView {
    // MARK: Text Components
 
@@ -46,37 +50,49 @@ open class AutoLayoutTextView: NSTextView {
       willSet {
          if let layoutManager = _layoutManager {
             NotificationCenter.default.removeObserver(self,
-                                                      name: EagerLayoutManager.didCompleteLayout,
+                                                      name: EagerLayoutManager.didCompleteLayoutNotification,
                                                       object: layoutManager)
          }
+
+         _textStorage = nil
+         _layoutManager = nil
       }
 
       didSet {
          if let textContainer = textContainer {
-            if let layoutManager = textContainer.layoutManager {
-               precondition(layoutManager is EagerLayoutManager, "AutoLayoutTextView requires the layout manager to be an instance of EagerLayoutManager.")
-               self._layoutManager = layoutManager as? EagerLayoutManager
-
-               if let textStorage = layoutManager.textStorage {
-                  precondition(textStorage is EagerTextStorage, "AutoLayoutTextView requires the text storage to be an instance of EagerTextStorage.")
-                  self._textStorage = textStorage as? EagerTextStorage
-               }
-            }
+            AutoLayoutTextView.setTextComponents(layoutManager: &_layoutManager,
+                                                 textStorage: &_textStorage,
+                                                 from: textContainer)
          }
 
          if let layoutManager = _layoutManager {
             NotificationCenter.default.addObserver(self,
                                                    selector: #selector(didCompleteLayout(_:)),
-                                                   name: EagerLayoutManager.didCompleteLayout,
+                                                   name: EagerLayoutManager.didCompleteLayoutNotification,
                                                    object: layoutManager)
          }
       }
    }
 
-   // MARK: Initialization
+   private static func setTextComponents(layoutManager layoutManagerOut: inout EagerLayoutManager?,
+                                         textStorage textStorageOut: inout EagerTextStorage?,
+                                         from textContainer: NSTextContainer) {
+      if let layoutManager = textContainer.layoutManager {
+         guard let eagerLayoutManager = layoutManager as? EagerLayoutManager else {
+            preconditionFailure("AutoLayoutTextView requires the layout manager to be an instance of EagerLayoutManager.")
+         }
+         layoutManagerOut = eagerLayoutManager
 
-   private static let textStorageCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView._textStorage"
-   private static let layoutManagerCoderKey = "mo.darren.ModernAppKit.AutoLayoutTextView._layoutManager"
+         if let textStorage = eagerLayoutManager.textStorage {
+            guard let eagerTextStorage = textStorage as? EagerTextStorage else {
+               preconditionFailure("AutoLayoutTextView requires the text storage to be an instance of EagerTextStorage.")
+            }
+            textStorageOut = eagerTextStorage
+         }
+      }
+   }
+
+   // MARK: Initialization/Deinitialization
 
    public override convenience init(frame frameRect: NSRect) {
       let textContainer = AutoLayoutTextView.makeDefaultTextContainer(withTextViewWidth: frameRect.width)
@@ -92,49 +108,12 @@ open class AutoLayoutTextView: NSTextView {
 
    public override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
       if let textContainer = container {
-         if let layoutManager = textContainer.layoutManager {
-            precondition(layoutManager is EagerLayoutManager, "AutoLayoutTextView requires the layout manager to be an instance of EagerLayoutManager.")
-            self._layoutManager = layoutManager as? EagerLayoutManager
-
-            if let textStorage = layoutManager.textStorage {
-               precondition(textStorage is EagerTextStorage, "AutoLayoutTextView requires the text storage to be an instance of EagerTextStorage.")
-               self._textStorage = textStorage as? EagerTextStorage
-            }
-         }
+         AutoLayoutTextView.setTextComponents(layoutManager: &_layoutManager,
+                                              textStorage: &_textStorage,
+                                              from: textContainer)
       }
 
       super.init(frame: frameRect, textContainer: container)
-
-      commonInit()
-   }
-
-   public required init?(coder: NSCoder) {
-      if let textStorage = coder.decodeObject(forKey: AutoLayoutTextView.textStorageCoderKey) as? EagerTextStorage {
-         self._textStorage = textStorage
-      } else {
-         self._textStorage = EagerTextStorage()
-      }
-      if let layoutManager = coder.decodeObject(forKey: AutoLayoutTextView.layoutManagerCoderKey) as? EagerLayoutManager {
-         self._layoutManager = layoutManager
-      } else {
-         self._layoutManager = EagerLayoutManager()
-      }
-
-      super.init(coder: coder)
-
-      if let layoutManager = _layoutManager {
-         _textStorage?.addLayoutManager(layoutManager)
-
-         if let textContainer = textContainer {
-            layoutManager.addTextContainer(textContainer)
-         } else {
-            let textContainer = AutoLayoutTextView.makeDefaultTextContainer(withTextViewWidth: frame.width)
-            layoutManager.addTextContainer(textContainer)
-
-            textContainer.textView = self
-            self.textContainer = textContainer
-         }
-      }
 
       commonInit()
    }
@@ -148,16 +127,9 @@ open class AutoLayoutTextView: NSTextView {
       if let layoutManager = _layoutManager {
          NotificationCenter.default.addObserver(self,
                                                 selector: #selector(didCompleteLayout(_:)),
-                                                name: EagerLayoutManager.didCompleteLayout,
+                                                name: EagerLayoutManager.didCompleteLayoutNotification,
                                                 object: layoutManager)
       }
-   }
-
-   open override func encode(with aCoder: NSCoder) {
-      super.encode(with: aCoder)
-
-      aCoder.encode(_textStorage, forKey: AutoLayoutTextView.textStorageCoderKey)
-      aCoder.encode(_layoutManager, forKey: AutoLayoutTextView.layoutManagerCoderKey)
    }
 
    deinit {
@@ -165,7 +137,7 @@ open class AutoLayoutTextView: NSTextView {
          // Because NSTextView does not support weak references, NotificationCenter will not
          // automatically remove the observer for us.
          NotificationCenter.default.removeObserver(self,
-                                                   name: EagerLayoutManager.didCompleteLayout,
+                                                   name: EagerLayoutManager.didCompleteLayoutNotification,
                                                    object: layoutManager)
       }
    }
@@ -177,6 +149,45 @@ open class AutoLayoutTextView: NSTextView {
       textContainer.lineFragmentPadding = 0
 
       return textContainer
+   }
+
+   // MARK: Serialization/Deserialization
+
+   private enum CoderKey {
+      static let textStorage = "mo.darren.ModernAppKit.AutoLayoutTextView._textStorage"
+      static let layoutManager = "mo.darren.ModernAppKit.AutoLayoutTextView._layoutManager"
+   }
+
+   public required init?(coder: NSCoder) {
+      if let textStorage = coder.decodeObject(forKey: CoderKey.textStorage) as? EagerTextStorage {
+         self._textStorage = textStorage
+      } else {
+         self._textStorage = EagerTextStorage()
+      }
+      if let layoutManager = coder.decodeObject(forKey: CoderKey.layoutManager) as? EagerLayoutManager {
+         self._layoutManager = layoutManager
+      } else {
+         self._layoutManager = EagerLayoutManager()
+      }
+
+      super.init(coder: coder)
+
+      if let layoutManager = _layoutManager {
+         _textStorage?.addLayoutManager(layoutManager)
+      }
+
+      let textContainer = self.textContainer ?? AutoLayoutTextView.makeDefaultTextContainer(withTextViewWidth: frame.width)
+      _layoutManager?.addTextContainer(textContainer)
+      textContainer.textView = self
+
+      commonInit()
+   }
+
+   open override func encode(with aCoder: NSCoder) {
+      super.encode(with: aCoder)
+
+      aCoder.encode(_textStorage, forKey: CoderKey.textStorage)
+      aCoder.encode(_layoutManager, forKey: CoderKey.layoutManager)
    }
 
    // MARK: Intrinsic Content Size
@@ -213,8 +224,8 @@ open class AutoLayoutTextView: NSTextView {
       let textHeight = layoutManager.usedRect(for: textContainer).height
 
       // The layout manager’s `usedRect(for:)` method returns (width of container, height of text).
-      // We want to use the width of the text for the intrinsic content size, so we need to calculate
-      // it ourselves.
+      // We want to use the width of the text for the intrinsic content size instead of the width
+      // of the container, so we need to calculate it ourselves.
       let textWidth = calculateTextWidth()
 
       let unitSquareSize = self.unitSquareSize

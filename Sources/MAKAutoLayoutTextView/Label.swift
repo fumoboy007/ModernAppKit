@@ -22,6 +22,9 @@
 
 import Cocoa
 
+/// An `AutoLayoutTextView` subclass that acts like a label.
+///
+/// Specifically, it is non-editable, does not draw a background by default, allows vibrancy, etc.
 public class Label: AutoLayoutTextView {
    // MARK: Initialization
 
