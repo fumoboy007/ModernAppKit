@@ -54,6 +54,16 @@ let package = Package(
       .target(
          name: "MAKLayerView"
       ),
+      .testTarget(
+         name: "MAKLayerViewTests",
+         dependencies: [
+            "MAKLayerView",
+            "SnapshotTesting",
+         ],
+         exclude: [
+            "__Snapshots__",
+         ]
+      ),
 
       .target(
          name: "MAKShadowView"
