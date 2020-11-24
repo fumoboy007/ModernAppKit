@@ -25,10 +25,6 @@ import Cocoa
 /// A container view that draws a rectangular shadow underneath its content view
 /// in a performant manner.
 public class ShadowView: NSView {
-   // MARK: Shadow Cache
-
-   private static let shadowCache = ShadowCache()
-
    // MARK: Disallowed NSView Properties
 
    public override var shadow: NSShadow? {
@@ -79,15 +75,15 @@ public class ShadowView: NSView {
       }
    }
 
-   private var shadowImageProperties = ShadowCache.ShadowImageProperties(shadowBlurRadius: 3,
-                                                                         shadowColor: NSColor.black) {
+   private var shadowImageProperties = ShadowImageProperties(shadowBlurRadius: 3,
+                                                             shadowColor: NSColor.black) {
       didSet {
          guard shadowImageProperties != oldValue else {
             return
          }
 
-         ShadowView.shadowCache.releaseShadowImage(with: oldValue)
-         shadowImageView.image = ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+         ShadowCache.shared.releaseShadowImage(with: oldValue)
+         shadowImageView.image = ShadowCache.shared.retainShadowImage(with: shadowImageProperties)
 
          needsUpdateConstraints = true
          needsLayout = true
@@ -150,12 +146,12 @@ public class ShadowView: NSView {
    }
 
    private func commonInit() {
-      shadowImageView.image = ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+      shadowImageView.image = ShadowCache.shared.retainShadowImage(with: shadowImageProperties)
       configureShadowImageView()
    }
 
    deinit {
-      ShadowView.shadowCache.releaseShadowImage(with: shadowImageProperties)
+      ShadowCache.shared.releaseShadowImage(with: shadowImageProperties)
    }
 
    // MARK: Serialization/Deserialization
@@ -261,92 +257,5 @@ public class ShadowView: NSView {
       shadowImageViewYOffsetConstraint?.constant = shadowOffset.height - shadowBlurRadius
       shadowImageViewWidthConstraint?.constant = shadowBlurRadius * 2
       shadowImageViewHeightConstraint?.constant = shadowBlurRadius * 2
-   }
-
-   // MARK: -
-
-   fileprivate class ShadowCache {
-      fileprivate struct ShadowImageProperties: Hashable {
-         var shadowBlurRadius: CGFloat
-         var shadowColor: NSColor
-      }
-
-      private class ImageContainer {
-         let image: NSImage
-
-         var retainCount = 1
-
-         init(image: NSImage) {
-            self.image = image
-         }
-      }
-
-      private var cache = [ShadowImageProperties: ImageContainer]()
-
-      // MARK: Cache API
-
-      func retainShadowImage(with imageProperties: ShadowImageProperties) -> NSImage {
-         if let imageContainer = cache[imageProperties] {
-            imageContainer.retainCount += 1
-
-            return imageContainer.image
-         } else {
-            let image = ShadowCache.makeShadowImage(with: imageProperties)
-
-            let imageContainer = ImageContainer(image: image)
-            cache[imageProperties] = imageContainer
-
-            return image
-         }
-      }
-
-      func releaseShadowImage(with imageProperties: ShadowImageProperties) {
-         guard let imageContainer = cache[imageProperties] else {
-            preconditionFailure("Trying to over-release shadow image.")
-         }
-
-         imageContainer.retainCount -= 1
-         if imageContainer.retainCount == 0 {
-            cache[imageProperties] = nil
-         }
-      }
-
-      // MARK: Creating Shadow Images
-
-      private static func makeShadowImage(with properties: ShadowImageProperties) -> NSImage {
-         // Because of the way gaussian blur works, the blur will have a thickness of two times
-         // the blur radius (centered on the border). Therefore, our image size will need to be
-         // four times the blur radius plus an extra point for the center. This will produce a
-         // normal shadow.
-         let imageSize = NSSize(width: properties.shadowBlurRadius * 4 + 1,
-                                height: properties.shadowBlurRadius * 4 + 1)
-         let capInsets = NSEdgeInsets(top: properties.shadowBlurRadius * 2,
-                                      left: properties.shadowBlurRadius * 2,
-                                      bottom: properties.shadowBlurRadius * 2,
-                                      right: properties.shadowBlurRadius * 2)
-
-         let image = NSImage(size: imageSize, flipped: false) { destinationRect in
-            let shadow = NSShadow()
-            shadow.shadowBlurRadius = properties.shadowBlurRadius
-            shadow.shadowOffset = NSSize(width: 0,
-                                         height: destinationRect.height)
-            shadow.shadowColor = properties.shadowColor
-
-            shadow.set()
-
-            let offscreenRect = NSRect(x: shadow.shadowBlurRadius,
-                                       y: shadow.shadowBlurRadius - destinationRect.height,
-                                       width: destinationRect.width - shadow.shadowBlurRadius * 2,
-                                       height: destinationRect.height - shadow.shadowBlurRadius * 2)
-
-            NSColor.black.set()
-            offscreenRect.fill()
-
-            return true
-         }
-         image.capInsets = capInsets
-
-         return image
-      }
    }
 }
