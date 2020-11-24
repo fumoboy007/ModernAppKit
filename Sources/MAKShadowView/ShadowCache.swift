@@ -29,6 +29,9 @@ class ShadowCache {
       let image: NSImage
 
       var retainCount = 1
+      #if DEBUG
+      var renderCount = 0
+      #endif
 
       init(image: NSImage) {
          self.image = image
@@ -52,7 +55,7 @@ class ShadowCache {
 
          return imageContainer.image
       } else {
-         let image = ShadowCache.makeShadowImage(with: imageProperties)
+         let image = makeShadowImage(with: imageProperties)
 
          let imageContainer = ImageContainer(image: image)
          cache[imageProperties] = imageContainer
@@ -72,9 +75,19 @@ class ShadowCache {
       }
    }
 
+   #if DEBUG
+   func retainCountForShadowImage(with imageProperties: ShadowImageProperties) -> Int {
+      return cache[imageProperties]?.retainCount ?? 0
+   }
+
+   func renderCountForShadowImage(with imageProperties: ShadowImageProperties) -> Int {
+      return cache[imageProperties]?.renderCount ?? 0
+   }
+   #endif
+
    // MARK: Creating Shadow Images
 
-   private static func makeShadowImage(with properties: ShadowImageProperties) -> NSImage {
+   private func makeShadowImage(with properties: ShadowImageProperties) -> NSImage {
       // Because of the way gaussian blur works, the blur will have a thickness of two times
       // the blur radius (centered on the border). Therefore, our image size will need to be
       // four times the blur radius plus an extra point for the center. This will produce a
@@ -86,7 +99,7 @@ class ShadowCache {
                                    bottom: properties.shadowBlurRadius * 2,
                                    right: properties.shadowBlurRadius * 2)
 
-      let image = NSImage(size: imageSize, flipped: false) { destinationRect in
+      let image = NSImage(size: imageSize, flipped: false) { [weak self] destinationRect in
          let shadow = NSShadow()
          shadow.shadowBlurRadius = properties.shadowBlurRadius
          shadow.shadowOffset = NSSize(width: 0,
@@ -103,10 +116,20 @@ class ShadowCache {
          NSColor.black.set()
          offscreenRect.fill()
 
+         #if DEBUG
+         self?.didRenderShadowImage(with: properties)
+         #endif
+
          return true
       }
       image.capInsets = capInsets
 
       return image
    }
+
+   #if DEBUG
+   private func didRenderShadowImage(with properties: ShadowImageProperties) {
+      cache[properties]?.renderCount += 1
+   }
+   #endif
 }
