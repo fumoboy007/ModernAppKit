@@ -61,8 +61,8 @@ public class ShadowView: NSView {
    /// The default value is (0, -3).
    public var shadowOffset = NSSize(width: 0, height: -3) {
       didSet {
+         needsUpdateConstraints = true
          needsLayout = true
-         needsDisplay = true
       }
    }
 
@@ -87,10 +87,10 @@ public class ShadowView: NSView {
          }
 
          ShadowView.shadowCache.releaseShadowImage(with: oldValue)
-         ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+         shadowImageView.image = ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
 
+         needsUpdateConstraints = true
          needsLayout = true
-         needsDisplay = true
       }
    }
 
@@ -111,8 +111,8 @@ public class ShadowView: NSView {
          }
 
          if let contentView = contentView {
-            contentView.translatesAutoresizingMaskIntoConstraints = false
             addSubview(contentView)
+            contentView.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
                contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
@@ -120,32 +120,25 @@ public class ShadowView: NSView {
                contentView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
             ])
          }
+
+         configureShadowImageView()
       }
    }
 
    public override var alignmentRectInsets: NSEdgeInsets {
-      var insets = NSEdgeInsets(top: shadowBlurRadius,
-                                left: shadowBlurRadius,
-                                bottom: shadowBlurRadius,
-                                right: shadowBlurRadius)
+      let contentRect = NSRect.zero
 
-      if shadowOffset.width > 0 {
-         insets.right += max(0, abs(shadowOffset.width) - insets.left)
-         insets.left = max(0, insets.left - abs(shadowOffset.width))
-      } else {
-         insets.left += max(0, abs(shadowOffset.width) - insets.right)
-         insets.right = max(0, insets.right - abs(shadowOffset.width))
-      }
+      var shadowRect = contentRect
+      shadowRect.origin.x += shadowOffset.width - shadowBlurRadius
+      shadowRect.origin.y += shadowOffset.height - shadowBlurRadius
+      shadowRect.size.width += shadowBlurRadius * 2
+      shadowRect.size.height += shadowBlurRadius * 2
 
-      if shadowOffset.height > 0 {
-         insets.top += max(0, abs(shadowOffset.height) - insets.bottom)
-         insets.bottom = max(0, insets.bottom - abs(shadowOffset.height))
-      } else {
-         insets.bottom += max(0, abs(shadowOffset.height) - insets.top)
-         insets.top = max(0, insets.top - abs(shadowOffset.height))
-      }
-
-      return insets
+      let enclosingRect = contentRect.union(shadowRect)
+      return NSEdgeInsets(top: enclosingRect.maxY - contentRect.maxY,
+                          left: contentRect.minX - enclosingRect.minX,
+                          bottom: contentRect.minY - enclosingRect.minY,
+                          right: enclosingRect.maxX - contentRect.maxX)
    }
 
    // MARK: Initialization/Deinitialization
@@ -157,10 +150,8 @@ public class ShadowView: NSView {
    }
 
    private func commonInit() {
-      wantsLayer = true
-      layerContentsRedrawPolicy = .duringViewResize
-
-      ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+      shadowImageView.image = ShadowView.shadowCache.retainShadowImage(with: shadowImageProperties)
+      configureShadowImageView()
    }
 
    deinit {
@@ -204,41 +195,72 @@ public class ShadowView: NSView {
       aCoder.encode(shadowColor, forKey: CoderKey.shadowColor)
    }
 
-   // MARK: Updating the Layer
+   // MARK: Shadow Image View
 
-   public override var wantsUpdateLayer: Bool {
-      return true
-   }
+   private let shadowImageView: NSImageView = {
+      let shadowImageView = NSImageView()
+      shadowImageView.wantsLayer = true
+      shadowImageView.imageScaling = .scaleAxesIndependently
 
-   public override func updateLayer() {
-      guard let layer = layer else {
+      return shadowImageView
+   }()
+
+   private var shadowImageViewXOffsetConstraint: NSLayoutConstraint?
+   private var shadowImageViewYOffsetConstraint: NSLayoutConstraint?
+   private var shadowImageViewWidthConstraint: NSLayoutConstraint?
+   private var shadowImageViewHeightConstraint: NSLayoutConstraint?
+
+   private func configureShadowImageView() {
+      shadowImageView.removeFromSuperview()
+      shadowImageViewXOffsetConstraint = nil
+      shadowImageViewYOffsetConstraint = nil
+      shadowImageViewWidthConstraint = nil
+      shadowImageViewHeightConstraint = nil
+
+      guard let contentView = contentView else {
          return
       }
 
-      // I assume that the view will be redisplayed whenever the backing scale factor changes
-      let scale = (window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor) ?? 1.0
-      let shadowImage = ShadowView.shadowCache.shadowImage(with: shadowImageProperties, scale: scale)
+      addSubview(shadowImageView,
+                 positioned: .below,
+                 relativeTo: contentView)
+      shadowImageView.translatesAutoresizingMaskIntoConstraints = false
 
-      layer.contents = shadowImage.layerContents(forContentsScale: scale)
-      layer.contentsScale = scale
+      let shadowImageViewXOffsetConstraint = shadowImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor)
+      self.shadowImageViewXOffsetConstraint = shadowImageViewXOffsetConstraint
 
-      var contentsRect = CGRect(x: shadowOffset.width > 0 ? shadowOffset.width : 0,
-                                y: shadowOffset.height > 0 ? shadowOffset.height : 0,
-                                width: bounds.width - abs(shadowOffset.width),
-                                height: bounds.height - abs(shadowOffset.height))
-      contentsRect.origin.x /= bounds.width
-      contentsRect.origin.y /= bounds.height
-      contentsRect.size.width /= bounds.width
-      contentsRect.size.height /= bounds.height
-      layer.contentsRect = contentsRect
+      let shadowImageViewYOffsetConstraint = contentView.bottomAnchor.constraint(equalTo: shadowImageView.bottomAnchor)
+      self.shadowImageViewYOffsetConstraint = shadowImageViewYOffsetConstraint
 
-      var contentsCenter = CGRect(origin: CGPoint.zero, size: shadowImage.size)
-      contentsCenter.apply(shadowImage.capInsets)
-      contentsCenter.origin.x /= shadowImage.size.width
-      contentsCenter.origin.y /= shadowImage.size.height
-      contentsCenter.size.width /= shadowImage.size.width
-      contentsCenter.size.height /= shadowImage.size.height
-      layer.contentsCenter = contentsCenter
+      let shadowImageViewWidthConstraint = shadowImageView.widthAnchor.constraint(equalTo: contentView.widthAnchor)
+      self.shadowImageViewWidthConstraint = shadowImageViewWidthConstraint
+
+      let shadowImageViewHeightConstraint = shadowImageView.heightAnchor.constraint(equalTo: contentView.heightAnchor)
+      self.shadowImageViewHeightConstraint = shadowImageViewHeightConstraint
+
+      updateShadowImageViewConstraints()
+
+      NSLayoutConstraint.activate([
+         shadowImageViewXOffsetConstraint,
+         shadowImageViewYOffsetConstraint,
+         shadowImageViewWidthConstraint,
+         shadowImageViewHeightConstraint
+      ])
+   }
+
+   // MARK: Updating Constraints
+
+   public override func updateConstraints() {
+      updateShadowImageViewConstraints()
+
+      super.updateConstraints()
+   }
+
+   private func updateShadowImageViewConstraints() {
+      shadowImageViewXOffsetConstraint?.constant = shadowOffset.width - shadowBlurRadius
+      shadowImageViewYOffsetConstraint?.constant = shadowOffset.height - shadowBlurRadius
+      shadowImageViewWidthConstraint?.constant = shadowBlurRadius * 2
+      shadowImageViewHeightConstraint?.constant = shadowBlurRadius * 2
    }
 
    // MARK: -
@@ -250,20 +272,31 @@ public class ShadowView: NSView {
       }
 
       private class ImageContainer {
+         let image: NSImage
+
          var retainCount = 1
-         var imageForScale = [CGFloat: NSImage]()
+
+         init(image: NSImage) {
+            self.image = image
+         }
       }
 
       private var cache = [ShadowImageProperties: ImageContainer]()
 
       // MARK: Cache API
 
-      func retainShadowImage(with imageProperties: ShadowImageProperties) {
+      func retainShadowImage(with imageProperties: ShadowImageProperties) -> NSImage {
          if let imageContainer = cache[imageProperties] {
             imageContainer.retainCount += 1
+
+            return imageContainer.image
          } else {
-            let imageContainer = ImageContainer()
+            let image = ShadowCache.makeShadowImage(with: imageProperties)
+
+            let imageContainer = ImageContainer(image: image)
             cache[imageProperties] = imageContainer
+
+            return image
          }
       }
 
@@ -278,57 +311,40 @@ public class ShadowView: NSView {
          }
       }
 
-      func shadowImage(with imageProperties: ShadowImageProperties, scale: CGFloat) -> NSImage {
-         guard let imageContainer = cache[imageProperties] else {
-            preconditionFailure("Retain the shadow image before retrieving it.")
-         }
-
-         if let image = imageContainer.imageForScale[scale] {
-            return image
-         } else {
-            let image = ShadowCache.makeShadowImage(with: imageProperties, scale: scale)
-            imageContainer.imageForScale[scale] = image
-            return image
-         }
-      }
-
       // MARK: Creating Shadow Images
 
-      private static func makeShadowImage(with properties: ShadowImageProperties, scale: CGFloat) -> NSImage {
-         // Because of the way gaussian blur works, the blurred border will have a thickness
-         // of two times the blur radius. Therefore, our image size will need to be four times
-         // the blur radius plus an extra pixel for the center. This will produce a normal
-         // shadow.
-         let imageSize = NSSize(width: properties.shadowBlurRadius * 4 * scale + 1,
-                                height: properties.shadowBlurRadius * 4 * scale + 1)
+      private static func makeShadowImage(with properties: ShadowImageProperties) -> NSImage {
+         // Because of the way gaussian blur works, the blur will have a thickness of two times
+         // the blur radius (centered on the border). Therefore, our image size will need to be
+         // four times the blur radius plus an extra point for the center. This will produce a
+         // normal shadow.
+         let imageSize = NSSize(width: properties.shadowBlurRadius * 4 + 1,
+                                height: properties.shadowBlurRadius * 4 + 1)
+         let capInsets = NSEdgeInsets(top: properties.shadowBlurRadius * 2,
+                                      left: properties.shadowBlurRadius * 2,
+                                      bottom: properties.shadowBlurRadius * 2,
+                                      right: properties.shadowBlurRadius * 2)
 
-         let shadow = NSShadow()
-         shadow.shadowBlurRadius = properties.shadowBlurRadius * scale
-         shadow.shadowOffset = NSSize(width: 0, height: imageSize.height)
-         shadow.shadowColor = properties.shadowColor
-
-         let image = NSImage(size: imageSize)
-         image.capInsets = NSEdgeInsets(top: shadow.shadowBlurRadius * 2,
-                                        left: shadow.shadowBlurRadius * 2,
-                                        bottom: shadow.shadowBlurRadius * 2,
-                                        right: shadow.shadowBlurRadius * 2)
-
-         do {
-            image.lockFocus()
-            defer {
-               image.unlockFocus()
-            }
+         let image = NSImage(size: imageSize, flipped: false) { destinationRect in
+            let shadow = NSShadow()
+            shadow.shadowBlurRadius = properties.shadowBlurRadius
+            shadow.shadowOffset = NSSize(width: 0,
+                                         height: destinationRect.height)
+            shadow.shadowColor = properties.shadowColor
 
             shadow.set()
 
             let offscreenRect = NSRect(x: shadow.shadowBlurRadius,
-                                       y: shadow.shadowBlurRadius - imageSize.height,
-                                       width: imageSize.width - shadow.shadowBlurRadius * 2,
-                                       height: imageSize.height - shadow.shadowBlurRadius * 2)
+                                       y: shadow.shadowBlurRadius - destinationRect.height,
+                                       width: destinationRect.width - shadow.shadowBlurRadius * 2,
+                                       height: destinationRect.height - shadow.shadowBlurRadius * 2)
 
             NSColor.black.set()
             offscreenRect.fill()
+
+            return true
          }
+         image.capInsets = capInsets
 
          return image
       }
