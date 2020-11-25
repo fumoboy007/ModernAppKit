@@ -23,6 +23,7 @@
 @testable import MAKLayerView
 
 import Cocoa
+import MAKTestUtilities
 import SnapshotTesting
 import XCTest
 
@@ -81,5 +82,45 @@ final class LayerViewTests: XCTestCase {
       assertSnapshot(matching: layerView,
                      as: .image(windowForDrawing: .newWindow(backingScaleFactor: 2)),
                      named: "2x")
+   }
+
+   func testSerialization() throws {
+      layerView.backgroundColor = .red
+      layerView.borderWidth = .points(3)
+      layerView.borderColor = .green
+      layerView.cornerRadius = 5
+      assertSnapshot(matching: layerView,
+                     as: .image,
+                     named: "original")
+
+      let deserializedLayerView = try LayerView.make(bySerializingAndDeserializing: layerView)
+
+      XCTAssertEqual(deserializedLayerView.backgroundColor, layerView.backgroundColor)
+      XCTAssertEqual(deserializedLayerView.borderWidth, layerView.borderWidth)
+      XCTAssertEqual(deserializedLayerView.borderColor, layerView.borderColor)
+      XCTAssertEqual(deserializedLayerView.cornerRadius, layerView.cornerRadius)
+
+      // Should be the same as the above snapshot of the original view.
+      assertSnapshot(matching: deserializedLayerView,
+                     as: .image,
+                     named: "deserialized")
+   }
+
+   func testDeserializationWithSerializedNSView() throws {
+      assertSnapshot(matching: layerView,
+                     as: .image,
+                     named: "default")
+
+      let deserializedLayerView = try LayerView.make(bySerializingAndDeserializing: NSView())
+
+      XCTAssertEqual(deserializedLayerView.backgroundColor, layerView.backgroundColor)
+      XCTAssertEqual(deserializedLayerView.borderWidth, layerView.borderWidth)
+      XCTAssertEqual(deserializedLayerView.borderColor, layerView.borderColor)
+      XCTAssertEqual(deserializedLayerView.cornerRadius, layerView.cornerRadius)
+
+      // Should be the same as the above snapshot of the layer view with default property values.
+      assertSnapshot(matching: deserializedLayerView,
+                     as: .image(size: layerView.frame.size),
+                     named: "deserialized")
    }
 }

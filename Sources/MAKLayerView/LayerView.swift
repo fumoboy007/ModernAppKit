@@ -30,7 +30,7 @@ import Cocoa
 open class LayerView: NSView {
    // MARK: Layer Properties
 
-   public enum BorderWidth {
+   public enum BorderWidth: Equatable {
       case points(CGFloat)
       case pixels(CGFloat)
 
@@ -180,15 +180,17 @@ open class LayerView: NSView {
    // MARK: Serialization/Deserialization
 
    private enum CoderKey {
-      static let backgroundColor = "mo.darren.ModernAppKit.LayerView.backgroundColor"
-      static let isBorderWidthInPoints = "mo.darren.ModernAppKit.LayerView.isBorderWidthInPoints"
-      static let borderWidth = "mo.darren.ModernAppKit.LayerView.borderWidth"
-      static let borderColor = "mo.darren.ModernAppKit.LayerView.borderColor"
-      static let cornerRadius = "mo.darren.ModernAppKit.LayerView.cornerRadius"
+      private static let prefix = "mo.darren.ModernAppKit.LayerView"
+
+      static let backgroundColor = "\(prefix).backgroundColor"
+      static let isBorderWidthInPoints = "\(prefix).isBorderWidthInPoints"
+      static let borderWidth = "\(prefix).borderWidth"
+      static let borderColor = "\(prefix).borderColor"
+      static let cornerRadius = "\(prefix).cornerRadius"
    }
 
    public required init?(coder: NSCoder) {
-      if let backgroundColor = coder.decodeObject(forKey: CoderKey.backgroundColor) as? NSColor {
+      if let backgroundColor = coder.decodeObject(of: NSColor.self, forKey: CoderKey.backgroundColor) {
          self.backgroundColor = backgroundColor
       }
 
@@ -203,7 +205,7 @@ open class LayerView: NSView {
          }
       }
 
-      if let borderColor = coder.decodeObject(forKey: CoderKey.borderColor) as? NSColor {
+      if let borderColor = coder.decodeObject(of: NSColor.self, forKey: CoderKey.borderColor) {
          self.borderColor = borderColor
       }
 

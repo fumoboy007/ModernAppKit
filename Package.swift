@@ -58,6 +58,7 @@ let package = Package(
          name: "MAKLayerViewTests",
          dependencies: [
             "MAKLayerView",
+            "MAKTestUtilities",
             "SnapshotTesting",
          ],
          exclude: [
