@@ -123,4 +123,83 @@ final class LayerViewTests: XCTestCase {
                      as: .image(size: layerView.frame.size),
                      named: "deserialized")
    }
+
+   func testNormalPropertyAnimations() {
+      let fromBackgroundColor = NSColor.red
+      let fromBorderColor = NSColor.green
+      let fromCornerRadius: CGFloat = 0
+
+      let toBackgroundColor = NSColor.green
+      let toBorderColor = NSColor.red
+      let toCornerRadius: CGFloat = 100
+
+      layerView.backgroundColor = fromBackgroundColor
+      layerView.borderColor = fromBorderColor
+      layerView.cornerRadius = fromCornerRadius
+
+      runAnimationsUntilHalfDuration(duration: 2) { layerView in
+         layerView.backgroundColor = toBackgroundColor
+         layerView.borderColor = toBorderColor
+         layerView.cornerRadius = toCornerRadius
+      }
+
+      XCTAssertNotEqual(layerView.backgroundColor, fromBackgroundColor)
+      XCTAssertNotEqual(layerView.backgroundColor, toBackgroundColor)
+      XCTAssertNotEqual(layerView.borderColor, fromBorderColor)
+      XCTAssertNotEqual(layerView.borderColor, toBorderColor)
+      XCTAssertNotEqual(layerView.cornerRadius, fromCornerRadius)
+      XCTAssertNotEqual(layerView.cornerRadius, toCornerRadius)
+   }
+
+   func testAnimatableBorderWidthInPoints() {
+      let fromValue: CGFloat = 300
+      let toValue: CGFloat = 400
+
+      layerView.borderWidth = .points(fromValue)
+
+      runAnimationsUntilHalfDuration(duration: 2) { layerView in
+         layerView.animatableBorderWidthInPoints = toValue
+      }
+
+      switch layerView.borderWidth {
+      case .points(let borderWidthInPoints):
+         XCTAssertGreaterThan(borderWidthInPoints, fromValue)
+         XCTAssertLessThan(borderWidthInPoints, toValue)
+
+      default:
+         XCTFail()
+      }
+   }
+
+   func testAnimatableBorderWidthInPixels() {
+      let fromValue: CGFloat = 300
+      let toValue: CGFloat = 400
+
+      layerView.borderWidth = .pixels(fromValue)
+
+      runAnimationsUntilHalfDuration(duration: 2) { layerView in
+         layerView.animatableBorderWidthInPixels = toValue
+      }
+
+      switch layerView.borderWidth {
+      case .pixels(let borderWidthInPixels):
+         XCTAssertGreaterThan(borderWidthInPixels, fromValue)
+         XCTAssertLessThan(borderWidthInPixels, toValue)
+
+      default:
+         XCTFail()
+      }
+   }
+
+   // MARK: - Private
+
+   private func runAnimationsUntilHalfDuration(duration: TimeInterval,
+                                               changes: (LayerView) -> Void) {
+      NSAnimationContext.runAnimationGroup { context in
+         context.duration = duration
+         changes(layerView.animator())
+      }
+
+      RunLoop.current.run(until: Date(timeIntervalSinceNow: duration / 2))
+   }
 }

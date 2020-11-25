@@ -71,12 +71,16 @@ open class LayerView: NSView {
 
    /// The width of the border around the view.
    ///
+   /// The default value is 0.
+   ///
    /// To animate, use `animatableBorderWidthInPoints` or
    /// `animatableBorderWidthInPixels`.
    ///
-   /// The default value is 0.
-   ///
    /// - Remark: Corresponds to the `CALayer.borderWidth` property.
+   ///
+   /// - Remark: Since `BorderWidth` is an enum with associated values, `borderWidth` cannot be a
+   ///           dynamic Objective-C property, which is a requirement for animations. Therefore, we need to
+   ///           maintain two separate dynamic Objective-C properties.
    public var borderWidth: BorderWidth {
       get {
          return _borderWidth
@@ -85,7 +89,7 @@ open class LayerView: NSView {
       set {
          _borderWidth = newValue
 
-         // Stop animations
+         // Stop animations.
          willChangeValue(forKey: "animatableBorderWidthInPoints")
          didChangeValue(forKey: "animatableBorderWidthInPoints")
          willChangeValue(forKey: "animatableBorderWidthInPixels")
@@ -103,6 +107,9 @@ open class LayerView: NSView {
    ///
    /// The `fromValue` of the animation will be automatically set
    /// to the current value of `borderWidth`.
+   ///
+   /// - Remark: This property cannot automatically be kept in sync with the other border width
+   ///           properties (except at the start of an animation) due to a dependency cycle.
    @objc
    public dynamic var animatableBorderWidthInPoints: CGFloat = 0 {
       didSet {
@@ -115,6 +122,9 @@ open class LayerView: NSView {
    ///
    /// The `fromValue` of the animation will be automatically set
    /// to the current value of `borderWidth`.
+   ///
+   /// - Remark: This property cannot automatically be kept in sync with the other border width
+   ///           properties (except at the start of an animation) due to a dependency cycle.
    @objc
    public dynamic var animatableBorderWidthInPixels: CGFloat = 0 {
       didSet {
@@ -163,18 +173,6 @@ open class LayerView: NSView {
    private func commonInit() {
       wantsLayer = true
       layerContentsRedrawPolicy = .onSetNeedsDisplay
-
-      let animatableProperties = [
-         "backgroundColor",
-         "animatableBorderWidthInPoints",
-         "animatableBorderWidthInPixels",
-         "borderColor",
-         "cornerRadius"
-      ]
-      for propertyName in animatableProperties {
-         let key = propertyName as NSAnimatablePropertyKey
-         animations[key] = CABasicAnimation(keyPath: propertyName)
-      }
    }
 
    // MARK: Serialization/Deserialization
@@ -264,32 +262,47 @@ open class LayerView: NSView {
 
    // MARK: Animations
 
-   open override func animation(forKey key: NSAnimatablePropertyKey) -> Any? {
-      guard let animationObj = super.animation(forKey: key) else {
-         return nil
+   open override class func defaultAnimation(forKey key: NSAnimatablePropertyKey) -> Any? {
+      switch key {
+      case "backgroundColor",
+           "animatableBorderWidthInPoints",
+           "animatableBorderWidthInPixels",
+           "borderColor",
+           "cornerRadius":
+         return CABasicAnimation(keyPath: key)
+
+      default:
+         return super.defaultAnimation(forKey: key)
       }
-      guard let animation = animationObj as? CABasicAnimation else {
-         return animationObj
+   }
+
+   open override func animation(forKey key: NSAnimatablePropertyKey) -> Any? {
+      guard let animation = super.animation(forKey: key) else {
+         return nil
       }
 
       switch key {
       case "animatableBorderWidthInPoints":
-         guard animation.fromValue == nil else {
+         guard let basicAnimation = animation as? CABasicAnimation,
+               basicAnimation.fromValue == nil else {
             break
          }
-
-         // Set fromValue to current borderWidth value, which may be
-         // different from current animatableBorderWidthInPoints value
-         animation.fromValue = borderWidth.inPoints(usingScale: contentsScale)
+         // Set `fromValue` to current `borderWidth` value, which may be
+         // different from current `animatableBorderWidthInPoints` value
+         // because the border width properties are not automatically
+         // kept in sync with each other.
+         basicAnimation.fromValue = borderWidth.inPoints(usingScale: contentsScale)
 
       case "animatableBorderWidthInPixels":
-         guard animation.fromValue == nil else {
+         guard let basicAnimation = animation as? CABasicAnimation,
+               basicAnimation.fromValue == nil else {
             break
          }
-
-         // Set fromValue to current borderWidth value, which may be
-         // different from current animatableBorderWidthInPixels value
-         animation.fromValue = borderWidth.inPixels(usingScale: contentsScale)
+         // Set `fromValue` to current `borderWidth` value, which may be
+         // different from current `animatableBorderWidthInPixels` value
+         // because the border width properties are not automatically
+         // kept in sync with each other.
+         basicAnimation.fromValue = borderWidth.inPixels(usingScale: contentsScale)
 
       default:
          break
