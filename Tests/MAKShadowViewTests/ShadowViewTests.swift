@@ -24,6 +24,7 @@
 
 import Cocoa
 import MAKLayerView
+import MAKTestUtilities
 import SnapshotTesting
 import XCTest
 
@@ -37,16 +38,9 @@ final class ShadowViewTests: XCTestCase {
    override func setUp() {
       super.setUp()
 
-      let contentView = LayerView()
-      contentView.backgroundColor = .green
-
       shadowView = ShadowView()
-      shadowView.contentView = contentView
-      shadowView.translatesAutoresizingMaskIntoConstraints = false
-      NSLayoutConstraint.activate([
-         shadowView.widthAnchor.constraint(equalToConstant: 40),
-         shadowView.heightAnchor.constraint(equalToConstant: 40)
-      ])
+      shadowView.contentView = ShadowViewTests.makeContentView()
+      ShadowViewTests.configureSizeConstraints(for: shadowView)
    }
 
    override func tearDown() {
@@ -150,7 +144,63 @@ final class ShadowViewTests: XCTestCase {
       XCTAssertEqual(ShadowCache.shared.renderCountForShadowImage(with: shadowImageProperties), 2)
    }
 
+   func testSerialization() throws {
+      shadowView.shadowBlurRadius = 10
+      shadowView.shadowOffset = .zero
+      shadowView.shadowColor = .red
+      assertSnapshot(matching: shadowView,
+                     as: .image,
+                     named: "original")
+
+      let deserializedShadowView = try ShadowView.make(bySerializingAndDeserializing: shadowView)
+
+      XCTAssertEqual(deserializedShadowView.shadowBlurRadius, shadowView.shadowBlurRadius)
+      XCTAssertEqual(deserializedShadowView.shadowOffset, shadowView.shadowOffset)
+      XCTAssertEqual(deserializedShadowView.shadowColor, shadowView.shadowColor)
+
+      ShadowViewTests.configureSizeConstraints(for: deserializedShadowView)
+      // Should be the same as the above snapshot of the original view.
+      assertSnapshot(matching: deserializedShadowView,
+                     as: .image,
+                     named: "deserialized")
+   }
+
+   func testDeserializationWithSerializedNSView() throws {
+      assertSnapshot(matching: shadowView,
+                     as: .image,
+                     named: "default")
+
+      let deserializedShadowView = try ShadowView.make(bySerializingAndDeserializing: NSView())
+
+      XCTAssertEqual(deserializedShadowView.shadowBlurRadius, shadowView.shadowBlurRadius)
+      XCTAssertEqual(deserializedShadowView.shadowOffset, shadowView.shadowOffset)
+      XCTAssertEqual(deserializedShadowView.shadowColor, shadowView.shadowColor)
+
+      deserializedShadowView.contentView = ShadowViewTests.makeContentView()
+      ShadowViewTests.configureSizeConstraints(for: deserializedShadowView)
+      // Should be the same as the above snapshot of the shadow view with default shadow property values.
+      assertSnapshot(matching: deserializedShadowView,
+                     as: .image,
+                     named: "deserialized")
+   }
+
    // MARK: - Private
+
+   private static func makeContentView() -> NSView {
+      let contentView = LayerView()
+      contentView.backgroundColor = .green
+
+      return contentView
+   }
+
+   private static func configureSizeConstraints(for shadowView: ShadowView) {
+      shadowView.translatesAutoresizingMaskIntoConstraints = false
+
+      NSLayoutConstraint.activate([
+         shadowView.widthAnchor.constraint(equalToConstant: 40),
+         shadowView.heightAnchor.constraint(equalToConstant: 40)
+      ])
+   }
 
    private func triggerRendering(of view: NSView,
                                  backingScaleFactor: CGFloat) {

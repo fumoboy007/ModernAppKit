@@ -106,35 +106,25 @@ public class ShadowView: NSView {
             oldContentView.removeFromSuperview()
          }
 
-         if let contentView = contentView {
-            addSubview(contentView)
-            contentView.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-               contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
-               contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-               contentView.topAnchor.constraint(equalTo: self.topAnchor),
-               contentView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
-            ])
-         }
-
+         configureContentView()
          configureShadowImageView()
       }
    }
 
-   public override var alignmentRectInsets: NSEdgeInsets {
-      let contentRect = NSRect.zero
+   private func configureContentView() {
+      guard let contentView = contentView else {
+         return
+      }
 
-      var shadowRect = contentRect
-      shadowRect.origin.x += shadowOffset.width - shadowBlurRadius
-      shadowRect.origin.y += shadowOffset.height - shadowBlurRadius
-      shadowRect.size.width += shadowBlurRadius * 2
-      shadowRect.size.height += shadowBlurRadius * 2
+      addSubview(contentView)
+      contentView.translatesAutoresizingMaskIntoConstraints = false
 
-      let enclosingRect = contentRect.union(shadowRect)
-      return NSEdgeInsets(top: enclosingRect.maxY - contentRect.maxY,
-                          left: contentRect.minX - enclosingRect.minX,
-                          bottom: contentRect.minY - enclosingRect.minY,
-                          right: enclosingRect.maxX - contentRect.maxX)
+      NSLayoutConstraint.activate([
+         contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+         contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+         contentView.topAnchor.constraint(equalTo: self.topAnchor),
+         contentView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+      ])
    }
 
    // MARK: Initialization/Deinitialization
@@ -146,6 +136,8 @@ public class ShadowView: NSView {
    }
 
    private func commonInit() {
+      configureContentView()
+
       shadowImageView.image = ShadowCache.shared.retainShadowImage(with: shadowImageProperties)
       configureShadowImageView()
    }
@@ -157,19 +149,20 @@ public class ShadowView: NSView {
    // MARK: Serialization/Deserialization
 
    private enum CoderKey {
-      static let shadowBlurRadius = "mo.darren.ModernAppKit.ShadowView.shadowBlurRadius"
-      static let shadowOffsetWidth = "mo.darren.ModernAppKit.ShadowView.shadowOffsetWidth"
-      static let shadowOffsetHeight = "mo.darren.ModernAppKit.ShadowView.shadowOffsetHeight"
-      static let shadowColor = "mo.darren.ModernAppKit.ShadowView.shadowColor"
+      private static let prefix = "mo.darren.ModernAppKit.ShadowView"
+
+      static let shadowBlurRadius = "\(prefix).shadowBlurRadius"
+      static let shadowOffsetWidth = "\(prefix).shadowOffsetWidth"
+      static let shadowOffsetHeight = "\(prefix).shadowOffsetHeight"
+      static let shadowColor = "\(prefix).shadowColor"
+
+      static let contentView = "\(prefix).contentView"
+      static let shadowImageView = "\(prefix).shadowImageView"
    }
 
    public required init?(coder: NSCoder) {
-      super.init(coder: coder)
-
-      commonInit()
-
       if coder.containsValue(forKey: CoderKey.shadowBlurRadius) {
-         shadowBlurRadius = CGFloat(coder.decodeDouble(forKey: CoderKey.shadowBlurRadius))
+         shadowImageProperties.shadowBlurRadius = CGFloat(coder.decodeDouble(forKey: CoderKey.shadowBlurRadius))
       }
       if coder.containsValue(forKey: CoderKey.shadowOffsetWidth) {
          shadowOffset.width = CGFloat(coder.decodeDouble(forKey: CoderKey.shadowOffsetWidth))
@@ -177,9 +170,23 @@ public class ShadowView: NSView {
       if coder.containsValue(forKey: CoderKey.shadowOffsetHeight) {
          shadowOffset.height = CGFloat(coder.decodeDouble(forKey: CoderKey.shadowOffsetHeight))
       }
-      if let shadowColor = coder.decodeObject(forKey: CoderKey.shadowColor) as? NSColor {
-         self.shadowColor = shadowColor
+      if let shadowColor = coder.decodeObject(of: NSColor.self, forKey: CoderKey.shadowColor) {
+         shadowImageProperties.shadowColor = shadowColor
       }
+      if let contentView = coder.decodeObject(of: NSView.self, forKey: CoderKey.contentView) {
+         self.contentView = contentView
+      }
+
+      super.init(coder: coder)
+
+      if let oldShadowImageView = coder.decodeObject(of: NSView.self, forKey: CoderKey.shadowImageView) {
+         // We do not want to serialize the shadow image view but `NSView.encode(with:)` serializes all
+         // subviews. Therefore, we need to remove the old shadow image view that was deserialized by
+         // `NSView.init(coder:)`.
+         oldShadowImageView.removeFromSuperview()
+      }
+
+      commonInit()
    }
 
    public override func encode(with aCoder: NSCoder) {
@@ -189,6 +196,8 @@ public class ShadowView: NSView {
       aCoder.encode(Double(shadowOffset.width), forKey: CoderKey.shadowOffsetWidth)
       aCoder.encode(Double(shadowOffset.height), forKey: CoderKey.shadowOffsetHeight)
       aCoder.encode(shadowColor, forKey: CoderKey.shadowColor)
+      aCoder.encode(contentView, forKey: CoderKey.contentView)
+      aCoder.encode(shadowImageView, forKey: CoderKey.shadowImageView)
    }
 
    // MARK: Shadow Image View
@@ -244,7 +253,7 @@ public class ShadowView: NSView {
       ])
    }
 
-   // MARK: Updating Constraints
+   // MARK: Layout
 
    public override func updateConstraints() {
       updateShadowImageViewConstraints()
@@ -257,5 +266,21 @@ public class ShadowView: NSView {
       shadowImageViewYOffsetConstraint?.constant = shadowOffset.height - shadowBlurRadius
       shadowImageViewWidthConstraint?.constant = shadowBlurRadius * 2
       shadowImageViewHeightConstraint?.constant = shadowBlurRadius * 2
+   }
+
+   public override var alignmentRectInsets: NSEdgeInsets {
+      let contentRect = NSRect.zero
+
+      var shadowRect = contentRect
+      shadowRect.origin.x += shadowOffset.width - shadowBlurRadius
+      shadowRect.origin.y += shadowOffset.height - shadowBlurRadius
+      shadowRect.size.width += shadowBlurRadius * 2
+      shadowRect.size.height += shadowBlurRadius * 2
+
+      let enclosingRect = contentRect.union(shadowRect)
+      return NSEdgeInsets(top: enclosingRect.maxY - contentRect.maxY,
+                          left: contentRect.minX - enclosingRect.minX,
+                          bottom: contentRect.minY - enclosingRect.minY,
+                          right: enclosingRect.maxX - contentRect.maxX)
    }
 }

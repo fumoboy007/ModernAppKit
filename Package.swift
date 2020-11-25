@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
    name: "ModernAppKit",
    platforms: [
-      .macOS(.v10_11),
+      .macOS(.v10_13),
    ],
    products: [
       .library(
@@ -73,11 +73,16 @@ let package = Package(
          dependencies: [
             "MAKLayerView",
             "MAKShadowView",
+            "MAKTestUtilities",
             "SnapshotTesting",
          ],
          exclude: [
             "__Snapshots__",
          ]
+      ),
+
+      .target(
+         name: "MAKTestUtilities"
       ),
    ]
 )
