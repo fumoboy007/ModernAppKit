@@ -36,20 +36,13 @@ open class EagerLayoutManager: NSLayoutManager, EagerLayoutManaging {
 
    open override var textStorage: NSTextStorage? {
       didSet {
-         if let textStorage = textStorage {
-            guard let eagerTextStorage = textStorage as? EagerTextStorage else {
-               preconditionFailure("EagerLayoutManager only accepts EagerTextStorage.")
-            }
-            _textStorage = eagerTextStorage
-         }
+         performFullLayout()
       }
    }
 
-   private var _textStorage: EagerTextStorage? {
-      didSet {
-         if _textStorage?.isEditing == false {
-            performFullLayout()
-         }
+   private var eagerTextStorage: EagerTextStorage? {
+      get {
+         return textStorage as? EagerTextStorage
       }
    }
 
@@ -66,24 +59,12 @@ open class EagerLayoutManager: NSLayoutManager, EagerLayoutManaging {
       backgroundLayoutEnabled = false
    }
 
-   // MARK: Serialization/Deserialization
-
-   private enum CoderKey {
-      static let textStorage = "mo.darren.ModernAppKit.EagerLayoutManager._textStorage"
-   }
+   // MARK: Deserialization
 
    public required init?(coder: NSCoder) {
-      self._textStorage = coder.decodeObject(forKey: CoderKey.textStorage) as? EagerTextStorage
-
       super.init(coder: coder)
 
       commonInit()
-   }
-
-   open override func encode(with aCoder: NSCoder) {
-      super.encode(with: aCoder)
-
-      aCoder.encode(self._textStorage, forKey: CoderKey.textStorage)
    }
 
    // MARK: Performing Layout
@@ -91,13 +72,11 @@ open class EagerLayoutManager: NSLayoutManager, EagerLayoutManaging {
    open override func textContainerChangedGeometry(_ container: NSTextContainer) {
       super.textContainerChangedGeometry(container)
 
-      if _textStorage?.isEditing == false {
-         performFullLayout()
-      }
+      performFullLayout()
    }
 
    open func performFullLayout() {
-      guard let textStorage = _textStorage else {
+      guard let textStorage = eagerTextStorage else {
          return
       }
       guard !textStorage.isEditing else {
@@ -105,6 +84,10 @@ open class EagerLayoutManager: NSLayoutManager, EagerLayoutManaging {
       }
 
       ensureLayout(forCharacterRange: NSRange(location: 0, length: textStorage.length))
+
+      for autoLayoutTextView in textContainers.lazy.compactMap({ $0.textView as? AutoLayoutTextView }) {
+         autoLayoutTextView.didCompleteLayout()
+      }
 
       NotificationCenter.default.post(name: EagerLayoutManager.didCompleteLayoutNotification,
                                       object: self)

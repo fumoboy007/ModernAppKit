@@ -44,6 +44,7 @@ let package = Package(
          name: "MAKAutoLayoutTextViewTests",
          dependencies: [
             "MAKAutoLayoutTextView",
+            "MAKTestUtilities",
             "SnapshotTesting",
          ],
          exclude: [

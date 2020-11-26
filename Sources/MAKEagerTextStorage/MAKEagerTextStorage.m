@@ -71,35 +71,36 @@ NSNotificationName const MAKEagerTextStorageDidChangeNotification = @"mo.darren.
    return self;
 }
 
-- (nullable id)initWithPasteboardPropertyList:(id)propertyList ofType:(NSPasteboardType)type {
-   self = [super initWithPasteboardPropertyList:propertyList ofType:type];
+- (instancetype)initWithString:(NSString *)str {
+   self = [super init];
 
    if (self) {
-      _backingStore = [[MAKEagerTextStorageBackingStoreClass alloc] init];
+      _backingStore = [[MAKEagerTextStorageBackingStoreClass alloc] initWithString:str];
    }
 
    return self;
 }
 
-// MARK: Serialization/Deserialization
-
-typedef NSString *MAKEagerTextStorageCoderKey NS_EXTENSIBLE_STRING_ENUM;
-static MAKEagerTextStorageCoderKey const MAKEagerTextStorageCoderKeyBackingStore = @"mo.darren.ModernAppKit.EagerTextStorage._backingStore";
-
-- (nullable instancetype)initWithCoder:(NSCoder *)aDecoder {
-   self = [super initWithCoder:aDecoder];
+- (instancetype)initWithString:(NSString *)str
+                    attributes:(nullable NSDictionary<NSAttributedStringKey,id> *)attrs {
+   self = [super init];
 
    if (self) {
-      _backingStore = [aDecoder decodeObjectForKey:MAKEagerTextStorageCoderKeyBackingStore];
+      _backingStore = [[MAKEagerTextStorageBackingStoreClass alloc] initWithString:str
+                                                                        attributes:attrs];
    }
 
    return self;
 }
 
-- (void)encodeWithCoder:(NSCoder *)aCoder {
-   [super encodeWithCoder:aCoder];
+- (instancetype)initWithAttributedString:(NSAttributedString *)attrStr {
+   self = [super init];
 
-   [aCoder encodeObject:_backingStore forKey:MAKEagerTextStorageCoderKeyBackingStore];
+   if (self) {
+      _backingStore = [[MAKEagerTextStorageBackingStoreClass alloc] initWithAttributedString:attrStr];
+   }
+
+   return self;
 }
 
 // MARK: Custom Change Notifications

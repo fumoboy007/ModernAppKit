@@ -24,6 +24,7 @@
 @testable import MAKEagerTextStorage
 
 import Cocoa
+import MAKTestUtilities
 import SnapshotTesting
 import XCTest
 
@@ -162,5 +163,104 @@ final class AutoLayoutTextViewTests: XCTestCase {
                      as: .image(size: NSSize(width: scaledIntrinsicContentSize.width,
                                              height: (textView.frame.height * scaleFactor).rounded(.up))),
                      named: "scaled")
+   }
+
+   func testSerialization() throws {
+      let originalTextView = AutoLayoutTextView()
+      originalTextView.textStorage!.append(AutoLayoutTextViewTests.attributedTextFake)
+
+      let textView = try AutoLayoutTextView.make(bySerializingAndDeserializing: originalTextView)
+
+      guard let textContainer = textView.textContainer else {
+         XCTFail("Expected the text view to have a text container.")
+         return
+      }
+      guard let layoutManager = textContainer.layoutManager else {
+         XCTFail("Expected the text container to have a layout manager.")
+         return
+      }
+      guard let textStorage = layoutManager.textStorage else {
+         XCTFail("Expected the layout manager to have a text storage.")
+         return
+      }
+
+      XCTAssertTrue(layoutManager is EagerLayoutManager)
+      XCTAssertTrue(textStorage is EagerTextStorage)
+
+      XCTAssertEqual(textContainer.layoutManager, layoutManager)
+      XCTAssertEqual(layoutManager.textContainers, [textContainer])
+
+      XCTAssertEqual(layoutManager.textStorage, textStorage)
+      XCTAssertEqual(textStorage.layoutManagers, [layoutManager])
+
+      XCTAssertEqual(textStorage, originalTextView.textStorage)
+   }
+
+   func testSerializationWithNoTextContainer() throws {
+      let originalTextView = AutoLayoutTextView(frame: .zero,
+                                                textContainer: nil)
+
+      let textView = try AutoLayoutTextView.make(bySerializingAndDeserializing: originalTextView)
+
+      XCTAssertNil(textView.textContainer)
+      XCTAssertNil(textView.layoutManager)
+      XCTAssertNil(textView.textStorage)
+   }
+
+   func testDeserializationWithSerializedNSTextView() throws {
+      let originalTextView = NSTextView()
+      originalTextView.textStorage!.append(AutoLayoutTextViewTests.attributedTextFake)
+
+      let textView = try AutoLayoutTextView.make(bySerializingAndDeserializing: originalTextView)
+
+      guard let textContainer = textView.textContainer else {
+         XCTFail("Expected the text view to have a text container.")
+         return
+      }
+      guard let layoutManager = textContainer.layoutManager else {
+         XCTFail("Expected the text container to have a layout manager.")
+         return
+      }
+      guard let textStorage = layoutManager.textStorage else {
+         XCTFail("Expected the layout manager to have a text storage.")
+         return
+      }
+
+      XCTAssertTrue(layoutManager is EagerLayoutManager)
+      XCTAssertTrue(textStorage is EagerTextStorage)
+
+      XCTAssertEqual(textContainer.layoutManager, layoutManager)
+      XCTAssertEqual(layoutManager.textContainers, [textContainer])
+
+      XCTAssertEqual(layoutManager.textStorage, textStorage)
+      XCTAssertEqual(textStorage.layoutManagers, [layoutManager])
+
+      XCTAssertEqual(textStorage, originalTextView.textStorage)
+   }
+
+   func testDeserializationWithSerializedNSView() throws {
+      let textView = try AutoLayoutTextView.make(bySerializingAndDeserializing: NSView())
+
+      guard let textContainer = textView.textContainer else {
+         XCTFail("Expected the text view to have a text container.")
+         return
+      }
+      guard let layoutManager = textContainer.layoutManager else {
+         XCTFail("Expected the text container to have a layout manager.")
+         return
+      }
+      guard let textStorage = layoutManager.textStorage else {
+         XCTFail("Expected the layout manager to have a text storage.")
+         return
+      }
+
+      XCTAssertTrue(layoutManager is EagerLayoutManager)
+      XCTAssertTrue(textStorage is EagerTextStorage)
+
+      XCTAssertEqual(textContainer.layoutManager, layoutManager)
+      XCTAssertEqual(layoutManager.textContainers, [textContainer])
+
+      XCTAssertEqual(layoutManager.textStorage, textStorage)
+      XCTAssertEqual(textStorage.layoutManagers, [layoutManager])
    }
 }
