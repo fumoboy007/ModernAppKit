@@ -1,6 +1,6 @@
 // MIT License
 //
-// Copyright © 2019 Darren Mo.
+// Copyright © 2019-2020 Darren Mo.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,12 +28,6 @@ import Cocoa
 public class Label: AutoLayoutTextView {
    // MARK: Initialization
 
-   public required init?(coder: NSCoder) {
-      super.init(coder: coder)
-
-      commonInit()
-   }
-
    public override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
       super.init(frame: frameRect, textContainer: container)
 
@@ -43,8 +37,32 @@ public class Label: AutoLayoutTextView {
    private func commonInit() {
       setAccessibilityRole(.staticText)
 
-      isEditable = false
+      super.isEditable = false
       drawsBackground = false
+   }
+
+   // MARK: Serialization/Deserialization
+
+   private enum CoderKey {
+      private static let prefix = "mo.darren.ModernAppKit.Label"
+
+      static let drawsBackground = "\(prefix).drawsBackground"
+   }
+
+   public required init?(coder: NSCoder) {
+      super.init(coder: coder)
+
+      commonInit()
+
+      if coder.containsValue(forKey: CoderKey.drawsBackground) {
+         drawsBackground = coder.decodeBool(forKey: CoderKey.drawsBackground)
+      }
+   }
+
+   public override func encode(with aCoder: NSCoder) {
+      super.encode(with: aCoder)
+
+      aCoder.encode(drawsBackground, forKey: CoderKey.drawsBackground)
    }
 
    // MARK: Vibrancy
@@ -62,19 +80,30 @@ public class Label: AutoLayoutTextView {
    // MARK: Simulating NSTextField Behavior
 
    public override func resignFirstResponder() -> Bool {
-      setSelectedRange(NSRange(location: 0, length: 0))
+      let shouldResign = super.resignFirstResponder()
 
-      return super.resignFirstResponder()
+      if shouldResign {
+         setSelectedRange(NSRange(location: 0, length: 0))
+      }
+
+      return shouldResign
    }
 
-   // MARK: Ignoring Events When User Interaction Disabled
+   // MARK: Ignoring Events
 
-   public var isUserInteractionEnabled: Bool {
-      return isEditable || isSelectable
+   @available(*, unavailable)
+   public override var isEditable: Bool {
+      get {
+         return super.isEditable
+      }
+
+      set {
+         super.isEditable = false
+      }
    }
 
    public override func hitTest(_ point: NSPoint) -> NSView? {
-      if isUserInteractionEnabled {
+      if isSelectable {
          return super.hitTest(point)
       } else {
          return nil
@@ -82,6 +111,6 @@ public class Label: AutoLayoutTextView {
    }
 
    public override var acceptsFirstResponder: Bool {
-      return isUserInteractionEnabled && super.acceptsFirstResponder
+      return isSelectable && super.acceptsFirstResponder
    }
 }
